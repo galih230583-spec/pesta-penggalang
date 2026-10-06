@@ -21,7 +21,11 @@ export interface RegistrationFormData {
   namaReguPutra: string;
   namaReguPutri: string;
   pesertaPutra: string[]; // 8 orang
+  tempatLahirPutra: string[]; // 8 orang
+  tanggalLahirPutra: string[]; // 8 orang (YYYY-MM-DD)
   pesertaPutri: string[]; // 8 orang
+  tempatLahirPutri: string[]; // 8 orang
+  tanggalLahirPutri: string[]; // 8 orang (YYYY-MM-DD)
   jumlahRegu: number; // Default 2 (Putra & Putri), biaya Rp1.300.000,00 / regu
   buktiPembayaran: PaymentProofFile | null;
   pernyataanBenar: boolean;
@@ -62,11 +66,130 @@ export const INITIAL_FORM_DATA: RegistrationFormData = {
   namaReguPutra: '',
   namaReguPutri: '',
   pesertaPutra: Array(8).fill(''),
+  tempatLahirPutra: Array(8).fill(''),
+  tanggalLahirPutra: Array(8).fill(''),
   pesertaPutri: Array(8).fill(''),
+  tempatLahirPutri: Array(8).fill(''),
+  tanggalLahirPutri: Array(8).fill(''),
   jumlahRegu: 2,
   buktiPembayaran: null,
   pernyataanBenar: false,
 };
+
+// Cutoff date: 30 Oktober 2026 (Max age 16 years old on 30 October)
+export const CUTOFF_YEAR = 2026;
+export const CUTOFF_MONTH = 10; // October (1-indexed)
+export const CUTOFF_DAY = 30;
+export const MIN_ALLOWED_BIRTHDATE = '2010-10-30'; // Born before 2010-10-30 means > 16 years old on 30 Oct 2026
+
+export interface AgeCheckResult {
+  hasDate: boolean;
+  isValid: boolean;
+  isOver16: boolean;
+  years: number;
+  months: number;
+  days: number;
+  statusText: string;
+}
+
+export function checkParticipantAgeOnOct30(birthDateStr?: string): AgeCheckResult {
+  if (!birthDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(birthDateStr.trim())) {
+    return {
+      hasDate: false,
+      isValid: false,
+      isOver16: false,
+      years: 0,
+      months: 0,
+      days: 0,
+      statusText: '',
+    };
+  }
+
+  const [bYear, bMonth, bDay] = birthDateStr.trim().split('-').map(Number);
+  const birthDate = new Date(bYear, bMonth - 1, bDay);
+  const cutoffDate = new Date(CUTOFF_YEAR, CUTOFF_MONTH - 1, CUTOFF_DAY);
+
+  if (isNaN(birthDate.getTime()) || birthDate > cutoffDate) {
+    return {
+      hasDate: true,
+      isValid: false,
+      isOver16: false,
+      years: 0,
+      months: 0,
+      days: 0,
+      statusText: 'Tanggal lahir tidak valid (melewati 30 Oktober 2026)',
+    };
+  }
+
+  let years = CUTOFF_YEAR - bYear;
+  let months = CUTOFF_MONTH - bMonth;
+  let days = CUTOFF_DAY - bDay;
+
+  if (days < 0) {
+    months -= 1;
+    const prevMonthDays = new Date(CUTOFF_YEAR, CUTOFF_MONTH - 1, 0).getDate();
+    days += prevMonthDays;
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  // Exceeds 16 years on 30 October if years > 16 OR (years === 16 and (months > 0 or days > 0))
+  const isOver16 = years > 16 || (years === 16 && (months > 0 || days > 0));
+
+  if (isOver16) {
+    return {
+      hasDate: true,
+      isValid: false,
+      isOver16: true,
+      years,
+      months,
+      days,
+      statusText: `DITOLAK: Usia ${years} thn ${months} bln ${days} hr pada 30 Okt 2026 (Lewat 16 Tahun)`,
+    };
+  }
+
+  return {
+    hasDate: true,
+    isValid: true,
+    isOver16: false,
+    years,
+    months,
+    days,
+    statusText: `Memenuhi Syarat: ${years} thn ${months} bln (pada 30 Okt 2026)`,
+  };
+}
+
+export function formatIndonesianDate(dateStr?: string): string {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+    return dateStr || '-';
+  }
+  const [y, m, d] = dateStr.trim().split('-').map(Number);
+  const months = [
+    'Januari',
+    'Februari',
+    'Maret',
+    'April',
+    'Mei',
+    'Juni',
+    'Juli',
+    'Agustus',
+    'September',
+    'Oktober',
+    'November',
+    'Desember',
+  ];
+  return `${d} ${months[m - 1] || ''} ${y}`;
+}
+
+export function formatTtlDisplay(tempat?: string, tanggal?: string): string {
+  const t = (tempat || '').trim();
+  const d = (tanggal || '').trim();
+  if (!t && !d) return '-';
+  if (t && d) return `${t}, ${formatIndonesianDate(d)}`;
+  return t || formatIndonesianDate(d);
+}
 
 export function formatRupiah(amount: number): string {
   return (
@@ -84,20 +207,24 @@ export function buildWhatsAppMessage(
 ): string {
   const totalBiaya = formatRupiah(reg.jumlahRegu * BIAYA_PER_REGU);
   const listPutra = reg.pesertaPutra
-    .map(
-      (nama, idx) =>
-        `${idx + 1}. ${nama.trim() || '-'}${
-          idx === 0 ? ' (Pinru)' : idx === 1 ? ' (Wapinru)' : ''
-        }`
-    )
+    .map((nama, idx) => {
+      const ttl = formatTtlDisplay(
+        reg.tempatLahirPutra?.[idx],
+        reg.tanggalLahirPutra?.[idx]
+      );
+      const role = idx === 0 ? ' (Pinru)' : idx === 1 ? ' (Wapinru)' : '';
+      return `${idx + 1}. ${nama.trim() || '-'}${role} — TTL: ${ttl}`;
+    })
     .join('\n');
   const listPutri = reg.pesertaPutri
-    .map(
-      (nama, idx) =>
-        `${idx + 1}. ${nama.trim() || '-'}${
-          idx === 0 ? ' (Pinru)' : idx === 1 ? ' (Wapinru)' : ''
-        }`
-    )
+    .map((nama, idx) => {
+      const ttl = formatTtlDisplay(
+        reg.tempatLahirPutri?.[idx],
+        reg.tanggalLahirPutri?.[idx]
+      );
+      const role = idx === 0 ? ' (Pinru)' : idx === 1 ? ' (Wapinru)' : '';
+      return `${idx + 1}. ${nama.trim() || '-'}${role} — TTL: ${ttl}`;
+    })
     .join('\n');
 
   return [

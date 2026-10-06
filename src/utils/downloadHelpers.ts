@@ -3,6 +3,7 @@ import {
   SubmittedRegistration,
   INFO_PEMBAYARAN,
   formatRupiah,
+  formatTtlDisplay,
 } from '../types/registration';
 
 export interface IdCardPerson {
@@ -291,10 +292,16 @@ async function renderReceiptToCanvas(reg: SubmittedRegistration): Promise<HTMLCa
   );
 
   ctx.fillStyle = '#23170D';
-  ctx.font = '18px sans-serif';
   reg.pesertaPutra.forEach((nama, idx) => {
     const label = idx === 0 ? ' [Pinru]' : idx === 1 ? ' [Wapinru]' : '';
-    ctx.fillText(`${idx + 1}. ${nama || '-'}${label}`, 105, y + 82 + idx * 38);
+    const ttl = formatTtlDisplay(reg.tempatLahirPutra?.[idx], reg.tanggalLahirPutra?.[idx]);
+    const rowTop = y + 72 + idx * 39;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#23170D';
+    ctx.fillText(`${idx + 1}. ${nama || '-'}${label}`, 105, rowTop);
+    ctx.font = '13.5px sans-serif';
+    ctx.fillStyle = '#5C4328';
+    ctx.fillText(`   TTL: ${ttl}`, 105, rowTop + 16);
   });
 
   ctx.fillStyle = '#FAF7F2';
@@ -310,10 +317,16 @@ async function renderReceiptToCanvas(reg: SubmittedRegistration): Promise<HTMLCa
   );
 
   ctx.fillStyle = '#23170D';
-  ctx.font = '18px sans-serif';
   reg.pesertaPutri.forEach((nama, idx) => {
     const label = idx === 0 ? ' [Pinru]' : idx === 1 ? ' [Wapinru]' : '';
-    ctx.fillText(`${idx + 1}. ${nama || '-'}${label}`, 645, y + 82 + idx * 38);
+    const ttl = formatTtlDisplay(reg.tempatLahirPutri?.[idx], reg.tanggalLahirPutri?.[idx]);
+    const rowTop = y + 72 + idx * 39;
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = '#23170D';
+    ctx.fillText(`${idx + 1}. ${nama || '-'}${label}`, 645, rowTop);
+    ctx.font = '13.5px sans-serif';
+    ctx.fillStyle = '#5C4328';
+    ctx.fillText(`   TTL: ${ttl}`, 645, rowTop + 16);
   });
 
   // Section 3
@@ -847,81 +860,144 @@ export function downloadAdminRecapAsPdf(
     { align: 'center' }
   );
 
-  let y = 44;
+  let y = 42;
 
   const drawTableHeader = (topY: number) => {
     pdf.setFillColor(239, 232, 220);
     pdf.rect(10, topY, 277, 9, 'F');
+    pdf.setDrawColor(194, 178, 153);
+    pdf.rect(10, topY, 277, 9, 'S');
     pdf.setTextColor(35, 23, 13);
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8.5);
-    pdf.text('No', 13, topY + 6);
-    pdf.text('Sekolah & Kepsek', 22, topY + 6);
-    pdf.text('Pembina Putra & Putri', 82, topY + 6);
-    pdf.text('Peserta Putra (8 Orang)', 145, topY + 6);
-    pdf.text('Peserta Putri (8 Orang)', 202, topY + 6);
-    pdf.text('Biaya & Status', 255, topY + 6);
+    pdf.setFontSize(8);
+    pdf.text('No', 12, topY + 6);
+    pdf.text('Sekolah & Kepala Sekolah', 18, topY + 6);
+    pdf.text('Pembina Putra & Putri (NIP)', 66, topY + 6);
+    pdf.text('8 Peserta Putra (Nama & Tempat, Tanggal Lahir)', 116, topY + 6);
+    pdf.text('8 Peserta Putri (Nama & Tempat, Tanggal Lahir)', 186, topY + 6);
+    pdf.text('Biaya & Status', 256, topY + 6);
   };
 
   drawTableHeader(y);
-  y += 11;
+  y += 9;
 
   submissions.forEach((s, idx) => {
-    const rowHeight = 36;
-    if (y + rowHeight > 196) {
+    const rowHeight = 68;
+    if (y + rowHeight > 198) {
       pdf.addPage('a4', 'landscape');
-      y = 15;
+      y = 14;
       drawTableHeader(y);
-      y += 11;
+      y += 9;
+    }
+
+    // Zebra row background
+    if (idx % 2 === 1) {
+      pdf.setFillColor(250, 247, 242);
+      pdf.rect(10, y, 277, rowHeight, 'F');
     }
 
     pdf.setDrawColor(216, 206, 190);
-    pdf.rect(10, y - 2, 277, rowHeight);
+    pdf.rect(10, y, 277, rowHeight, 'S');
 
+    // Vertical column dividers for neat alignment
+    [16.5, 64, 114, 184, 254].forEach((colX) => {
+      pdf.line(colX, y, colX, y + rowHeight);
+    });
+
+    const topPad = y + 5;
+
+    // Col 0: No
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(8);
     pdf.setTextColor(35, 23, 13);
-    pdf.text(String(idx + 1), 13, y + 4);
+    pdf.text(String(idx + 1), 12, topPad);
 
     // Col 1: Sekolah & Kepsek
-    pdf.text(s.namaSekolah.slice(0, 32), 22, y + 4);
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7.5);
-    pdf.text(`No: ${s.nomorRegistrasi}`, 22, y + 9);
-    pdf.text(`Kepsek: ${s.namaKepalaSekolah.slice(0, 28)}`, 22, y + 14);
-    pdf.text(`NIP: ${s.nipKepalaSekolah}`, 22, y + 19);
-    pdf.text(`Tgl: ${s.tanggalDaftar}`, 22, y + 24);
-
-    // Col 2: Pembina
     pdf.setFont('helvetica', 'bold');
-    pdf.text('Putra:', 82, y + 4);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`1. ${s.namaPembinaPutra.slice(0, 26)}`, 82, y + 8.5);
-    pdf.text(`2. ${(s.namaPembinaPutra2 || '-').slice(0, 26)}`, 82, y + 13);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Putri:', 82, y + 18.5);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`1. ${s.namaPembinaPutri.slice(0, 26)}`, 82, y + 23);
-    pdf.text(`2. ${(s.namaPembinaPutri2 || '-').slice(0, 26)}`, 82, y + 27.5);
+    pdf.setFontSize(8);
+    const schoolLines = pdf.splitTextToSize(s.namaSekolah || '-', 45);
+    pdf.text(schoolLines.slice(0, 2), 18, topPad);
 
-    // Col 3: Peserta Putra (8)
+    const afterSchoolY = topPad + (schoolLines.length > 1 ? 8 : 4.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7);
+    pdf.setTextColor(92, 67, 40);
+    pdf.text(`No: ${s.nomorRegistrasi}`, 18, afterSchoolY);
+
+    pdf.setTextColor(35, 23, 13);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Kepala Sekolah:', 18, afterSchoolY + 5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text((s.namaKepalaSekolah || '-').slice(0, 28), 18, afterSchoolY + 9);
+    pdf.text(`NIP: ${s.nipKepalaSekolah || '-'}`, 18, afterSchoolY + 13);
+    pdf.setTextColor(107, 87, 68);
+    pdf.text(`Daftar: ${s.tanggalDaftar}`, 18, afterSchoolY + 18);
+
+    // Col 2: Pembina Putra & Putri + NIP
+    pdf.setTextColor(139, 30, 30);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.2);
+    pdf.text('Pembina Putra:', 66, topPad);
+    pdf.setTextColor(35, 23, 13);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.8);
+    pdf.text(`1. ${(s.namaPembinaPutra || '-').slice(0, 26)}`, 66, topPad + 4);
+    pdf.text(`   NIP: ${s.nipPembinaPutra || '-'}`, 66, topPad + 7.5);
+    pdf.text(`2. ${(s.namaPembinaPutra2 || '-').slice(0, 26)}`, 66, topPad + 12);
+    pdf.text(`   NIP: ${s.nipPembinaPutra2 || '-'}`, 66, topPad + 15.5);
+
+    pdf.setTextColor(75, 30, 120);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.2);
+    pdf.text('Pembina Putri:', 66, topPad + 22);
+    pdf.setTextColor(35, 23, 13);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(6.8);
+    pdf.text(`1. ${(s.namaPembinaPutri || '-').slice(0, 26)}`, 66, topPad + 26);
+    pdf.text(`   NIP: ${s.nipPembinaPutri || '-'}`, 66, topPad + 29.5);
+    pdf.text(`2. ${(s.namaPembinaPutri2 || '-').slice(0, 26)}`, 66, topPad + 34);
+    pdf.text(`   NIP: ${s.nipPembinaPutri2 || '-'}`, 66, topPad + 37.5);
+
+    // Col 3: Peserta Putra (8) + Tempat, Tanggal Lahir Lengkap (2 baris per peserta agar tahun lahir utuh)
     s.pesertaPutra.forEach((p, i) => {
-      pdf.text(`${i + 1}. ${(p || '-').slice(0, 26)}`, 145, y + 3.5 + i * 3.8);
+      const ttl = formatTtlDisplay(s.tempatLahirPutra?.[i], s.tanggalLahirPutra?.[i]);
+      const itemY = topPad - 0.5 + i * 7.8;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(6.8);
+      pdf.setTextColor(35, 23, 13);
+      pdf.text(`${i + 1}. ${(p || '-').slice(0, 34)}`, 116, itemY);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.3);
+      pdf.setTextColor(92, 67, 40);
+      pdf.text(`   TTL: ${ttl}`, 116, itemY + 3.2);
     });
 
-    // Col 4: Peserta Putri (8)
+    // Col 4: Peserta Putri (8) + Tempat, Tanggal Lahir Lengkap (2 baris per peserta agar tahun lahir utuh)
     s.pesertaPutri.forEach((p, i) => {
-      pdf.text(`${i + 1}. ${(p || '-').slice(0, 26)}`, 202, y + 3.5 + i * 3.8);
+      const ttl = formatTtlDisplay(s.tempatLahirPutri?.[i], s.tanggalLahirPutri?.[i]);
+      const itemY = topPad - 0.5 + i * 7.8;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(6.8);
+      pdf.setTextColor(35, 23, 13);
+      pdf.text(`${i + 1}. ${(p || '-').slice(0, 34)}`, 186, itemY);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(6.3);
+      pdf.setTextColor(92, 67, 40);
+      pdf.text(`   TTL: ${ttl}`, 186, itemY + 3.2);
     });
 
     // Col 5: Biaya & Status
+    pdf.setFontSize(8);
     pdf.setFont('helvetica', 'bold');
     pdf.setTextColor(200, 30, 30);
-    pdf.text(formatRupiah(s.totalBiaya), 255, y + 5);
+    pdf.text(formatRupiah(s.totalBiaya), 256, topPad);
     pdf.setTextColor(35, 23, 13);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(`${s.jumlahRegu} Regu`, 255, y + 10);
-    pdf.text(s.statusVerifikasi || 'Menunggu Verifikasi', 255, y + 15);
+    pdf.setFontSize(7);
+    pdf.text(`${s.jumlahRegu} Regu`, 256, topPad + 5);
+    pdf.text(s.statusVerifikasi || 'Menunggu Verifikasi', 256, topPad + 10);
 
     y += rowHeight;
   });

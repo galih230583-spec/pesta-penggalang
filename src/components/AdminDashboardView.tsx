@@ -20,6 +20,7 @@ import {
 import {
   SubmittedRegistration,
   formatRupiah,
+  formatTtlDisplay,
 } from '../types/registration';
 import {
   downloadAdminRecapAsPdf,
@@ -97,9 +98,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       'Pembina Putri 2',
       'NIP Pembina Putri 2',
       'Nama Regu Putra',
-      ...Array.from({ length: 8 }, (_, i) => `Peserta Putra ${i + 1}`),
+      ...Array.from({ length: 8 }, (_, i) => [
+        `Nama Peserta Putra ${i + 1}`,
+        `Tempat & Tgl Lahir Putra ${i + 1}`,
+      ]).flat(),
       'Nama Regu Putri',
-      ...Array.from({ length: 8 }, (_, i) => `Peserta Putri ${i + 1}`),
+      ...Array.from({ length: 8 }, (_, i) => [
+        `Nama Peserta Putri ${i + 1}`,
+        `Tempat & Tgl Lahir Putri ${i + 1}`,
+      ]).flat(),
       'Jumlah Regu',
       'Total Biaya (Rp)',
     ];
@@ -109,34 +116,60 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       return `"${str}"`;
     };
 
+    // Format NIP as Excel literal string so 18-digit NIP is never rounded/altered by Excel
+    const formatExcelText = (val: string | undefined) => {
+      const clean = (val ?? '-').trim();
+      if (!clean || clean === '-') return '-';
+      return `="${clean.replace(/"/g, '""')}"`;
+    };
+
     const rows = submissions.map((s) => [
       s.nomorRegistrasi,
       s.tanggalDaftar,
       s.statusVerifikasi || 'Menunggu Verifikasi',
       s.namaSekolah,
       s.namaKepalaSekolah,
-      s.nipKepalaSekolah,
+      formatExcelText(s.nipKepalaSekolah),
       s.namaPembinaPutra,
-      s.nipPembinaPutra,
+      formatExcelText(s.nipPembinaPutra),
       s.namaPembinaPutra2 || '-',
-      s.nipPembinaPutra2 || '-',
+      formatExcelText(s.nipPembinaPutra2),
       s.namaPembinaPutri,
-      s.nipPembinaPutri,
+      formatExcelText(s.nipPembinaPutri),
       s.namaPembinaPutri2 || '-',
-      s.nipPembinaPutri2 || '-',
+      formatExcelText(s.nipPembinaPutri2),
       s.namaReguPutra || '-',
-      ...s.pesertaPutra.map((p) => p || '-'),
+      ...s.pesertaPutra
+        .map((p, i) => [
+          p || '-',
+          formatTtlDisplay(s.tempatLahirPutra?.[i], s.tanggalLahirPutra?.[i]),
+        ])
+        .flat(),
       s.namaReguPutri || '-',
-      ...s.pesertaPutri.map((p) => p || '-'),
+      ...s.pesertaPutri
+        .map((p, i) => [
+          p || '-',
+          formatTtlDisplay(s.tempatLahirPutri?.[i], s.tanggalLahirPutri?.[i]),
+        ])
+        .flat(),
       s.jumlahRegu,
       s.totalBiaya,
     ]);
 
+    const formatCell = (val: string | number | undefined) => {
+      const str = String(val ?? '');
+      if (str.startsWith('="') && str.endsWith('"')) {
+        return str;
+      }
+      return escapeCsv(val);
+    };
+
     const csvContent =
       '\uFEFF' +
-      [headers.map(escapeCsv).join(','), ...rows.map((r) => r.map(escapeCsv).join(','))].join(
-        '\n'
-      );
+      [
+        headers.map(escapeCsv).join(','),
+        ...rows.map((r) => r.map(formatCell).join(',')),
+      ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

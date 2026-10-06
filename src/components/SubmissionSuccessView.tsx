@@ -19,6 +19,7 @@ import {
   INFO_PEMBAYARAN,
   formatRupiah,
   buildWhatsAppMessage,
+  formatTtlDisplay,
 } from '../types/registration';
 import {
   downloadReceiptAsPdf,
@@ -353,11 +354,20 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
                       key={idx}
                       className="flex items-center justify-between py-1.5 border-b border-[#E5DEC9]/50 last:border-none"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-6 h-6 rounded-lg bg-[#4A2C11] text-white font-mono-num text-xs font-semibold flex items-center justify-center shrink-0">
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-6 h-6 rounded-lg bg-[#4A2C11] text-white font-mono-num text-xs font-semibold flex items-center justify-center shrink-0 mt-0.5">
                           {idx + 1}
                         </span>
-                        <span className="font-medium text-[#23170D]">{nama}</span>
+                        <div>
+                          <div className="font-medium text-[#23170D]">{nama}</div>
+                          <div className="text-xs text-[#6B5744]">
+                            TTL:{' '}
+                            {formatTtlDisplay(
+                              registration.tempatLahirPutra?.[idx],
+                              registration.tanggalLahirPutra?.[idx]
+                            )}
+                          </div>
+                        </div>
                       </div>
                       {idx === 0 && (
                         <span className="text-xs text-[#7A5C3E] font-medium">Pinru</span>
@@ -392,11 +402,20 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
                       key={idx}
                       className="flex items-center justify-between py-1.5 border-b border-[#E5DEC9]/50 last:border-none"
                     >
-                      <div className="flex items-center gap-2.5">
-                        <span className="w-6 h-6 rounded-lg bg-[#4B1E78] text-white font-mono-num text-xs font-semibold flex items-center justify-center shrink-0">
+                      <div className="flex items-start gap-2.5">
+                        <span className="w-6 h-6 rounded-lg bg-[#4B1E78] text-white font-mono-num text-xs font-semibold flex items-center justify-center shrink-0 mt-0.5">
                           {idx + 1}
                         </span>
-                        <span className="font-medium text-[#23170D]">{nama}</span>
+                        <div>
+                          <div className="font-medium text-[#23170D]">{nama}</div>
+                          <div className="text-xs text-[#6B5744]">
+                            TTL:{' '}
+                            {formatTtlDisplay(
+                              registration.tempatLahirPutri?.[idx],
+                              registration.tanggalLahirPutri?.[idx]
+                            )}
+                          </div>
+                        </div>
                       </div>
                       {idx === 0 && (
                         <span className="text-xs text-[#6B5744] font-medium">Pinru</span>

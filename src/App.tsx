@@ -30,6 +30,7 @@ import {
   BIAYA_PER_REGU,
   formatRupiah,
   buildWhatsAppMessage,
+  checkParticipantAgeOnOct30,
 } from './types/registration';
 import { TunasKelapaLogo, WosmLogo } from './components/PramukaEmblems';
 import { SubmissionSuccessView } from './components/SubmissionSuccessView';
@@ -41,7 +42,11 @@ function createEmptyForm(): RegistrationFormData {
   return {
     ...INITIAL_FORM_DATA,
     pesertaPutra: Array(8).fill(''),
+    tempatLahirPutra: Array(8).fill(''),
+    tanggalLahirPutra: Array(8).fill(''),
     pesertaPutri: Array(8).fill(''),
+    tempatLahirPutri: Array(8).fill(''),
+    tanggalLahirPutri: Array(8).fill(''),
   };
 }
 
@@ -154,6 +159,44 @@ export default function App() {
     }
   };
 
+  const handleTempatLahirChange = (
+    gender: 'putra' | 'putri',
+    index: number,
+    value: string
+  ) => {
+    setFormData((prev) => {
+      const key = gender === 'putra' ? 'tempatLahirPutra' : 'tempatLahirPutri';
+      const updated = [...prev[key]];
+      updated[index] = value;
+      return {
+        ...prev,
+        [key]: updated,
+      };
+    });
+    if (validationErrors.length > 0) {
+      setValidationErrors([]);
+    }
+  };
+
+  const handleTanggalLahirChange = (
+    gender: 'putra' | 'putri',
+    index: number,
+    value: string
+  ) => {
+    setFormData((prev) => {
+      const key = gender === 'putra' ? 'tanggalLahirPutra' : 'tanggalLahirPutri';
+      const updated = [...prev[key]];
+      updated[index] = value;
+      return {
+        ...prev,
+        [key]: updated,
+      };
+    });
+    if (validationErrors.length > 0) {
+      setValidationErrors([]);
+    }
+  };
+
   const handleBulkPaste = (gender: 'putra' | 'putri') => {
     const raw = gender === 'putra' ? pasteTextPutra : pasteTextPutri;
     const lines = raw
@@ -247,24 +290,24 @@ export default function App() {
       <text x="44" y="62" fill="#FFFFFF" font-family="sans-serif" font-size="20" font-weight="bold">BANK KALTIMTARA — BUKTI TRANSFER</text>
       <text x="44" y="130" fill="#14532D" font-family="monospace" font-size="16">Rekening Tujuan : 0042830798 (SUSILAWATI)</text>
       <text x="44" y="168" fill="#14532D" font-family="monospace" font-size="16">Nominal Transfer : Rp2.600.000,00 (2 Regu)</text>
-      <text x="44" y="206" fill="#14532D" font-family="monospace" font-size="16">Berita Transfer  : Pesta Penggalang SMPN 1 Muara Kaman</text>
+      <text x="44" y="206" fill="#14532D" font-family="monospace" font-size="16">Berita Transfer  : Pesta Penggalang SMPN 6 Muara Kaman</text>
       <text x="44" y="244" fill="#15803D" font-family="sans-serif" font-size="18" font-weight="bold">STATUS: BERHASIL / LUNAS</text>
       <text x="44" y="310" fill="#6B5744" font-family="sans-serif" font-size="13">Kwarran Gerakan Pramuka Kecamatan Muara Kaman</text>
     </svg>`;
     const svgDataUrl = `data:image/svg+xml;utf8,${encodeURIComponent(sampleReceiptSvg)}`;
 
     setFormData({
-      namaSekolah: 'SMP Negeri 1 Muara Kaman',
-      namaKepalaSekolah: 'H. Bambang Sutrisno, S.Pd., M.Pd.',
-      nipKepalaSekolah: '197405121999031004',
-      namaPembinaPutra: 'Muhammad Rizky Pratama, S.Pd.',
-      nipPembinaPutra: '198911202015031002',
-      namaPembinaPutra2: 'Hendra Gunawan, S.Pd.',
-      nipPembinaPutra2: '199108142019031005',
-      namaPembinaPutri: 'Siti Nurhaliza, S.Pd.',
-      nipPembinaPutri: '199204182019032008',
-      namaPembinaPutri2: 'Dewi Sartika, S.Pd.',
-      nipPembinaPutri2: '199402102022212011',
+      namaSekolah: 'SMP Negeri 6 Muara Kaman',
+      namaKepalaSekolah: 'Sukriansyah, S.Pd',
+      nipKepalaSekolah: '197012102008011019',
+      namaPembinaPutra: 'Dedi Irawan, S.Pd',
+      nipPembinaPutra: '199202192025211043',
+      namaPembinaPutra2: 'Suwandi, S.Pd',
+      nipPembinaPutra2: '198606102022211010',
+      namaPembinaPutri: 'Ani Fitriani, S.Pd',
+      nipPembinaPutri: '198705062022212003',
+      namaPembinaPutri2: 'Ubung Sartika, S.Pd',
+      nipPembinaPutri2: '199511012024212010',
       namaReguPutra: 'Elang Hitam',
       namaReguPutri: 'Melati Putih',
       pesertaPutra: [
@@ -277,6 +320,26 @@ export default function App() {
         'Gilang Dirga Pratama',
         'Hendra Setiawan',
       ],
+      tempatLahirPutra: [
+        'Muara Kaman',
+        'Muara Kaman',
+        'Tenggarong',
+        'Muara Kaman',
+        'Sebulu',
+        'Muara Kaman',
+        'Kota Bangun',
+        'Muara Kaman',
+      ],
+      tanggalLahirPutra: [
+        '2012-03-14',
+        '2012-07-21',
+        '2011-11-05',
+        '2013-01-19',
+        '2012-05-08',
+        '2013-04-12',
+        '2012-09-25',
+        '2013-06-30',
+      ],
       pesertaPutri: [
         'Aisyah Putri Maharani',
         'Bunga Citra Lestari',
@@ -287,9 +350,29 @@ export default function App() {
         'Gita Gutawa Ramadhani',
         'Hana Saraswati',
       ],
+      tempatLahirPutri: [
+        'Muara Kaman',
+        'Tenggarong',
+        'Muara Kaman',
+        'Muara Kaman',
+        'Sebulu',
+        'Muara Kaman',
+        'Kota Bangun',
+        'Muara Kaman',
+      ],
+      tanggalLahirPutri: [
+        '2012-02-18',
+        '2012-08-09',
+        '2013-01-27',
+        '2011-12-15',
+        '2012-06-04',
+        '2013-03-22',
+        '2012-10-11',
+        '2013-05-16',
+      ],
       jumlahRegu: 2,
       buktiPembayaran: {
-        fileName: 'Bukti_Transfer_Bank_Kaltimtara_SMPN1_MuaraKaman.svg',
+        fileName: 'Bukti_Transfer_Bank_Kaltimtara_SMPN6_MuaraKaman.svg',
         fileSize: 184320,
         fileType: 'image/svg+xml',
         dataUrl: svgDataUrl,
@@ -335,6 +418,48 @@ export default function App() {
     }).catch(() => {});
   };
 
+  // Check valid participants (name + tempat lahir + tanggal lahir valid <= 16 years on 30 Oct)
+  const validPutraCount = formData.pesertaPutra.filter((n, idx) => {
+    const ageCheck = checkParticipantAgeOnOct30(formData.tanggalLahirPutra[idx]);
+    return (
+      n.trim() !== '' &&
+      formData.tempatLahirPutra[idx]?.trim() !== '' &&
+      ageCheck.hasDate &&
+      ageCheck.isValid
+    );
+  }).length;
+
+  const validPutriCount = formData.pesertaPutri.filter((n, idx) => {
+    const ageCheck = checkParticipantAgeOnOct30(formData.tanggalLahirPutri[idx]);
+    return (
+      n.trim() !== '' &&
+      formData.tempatLahirPutri[idx]?.trim() !== '' &&
+      ageCheck.hasDate &&
+      ageCheck.isValid
+    );
+  }).length;
+
+  // Detect any participant over 16 years old on 30 October
+  const rejectedPutraList = formData.pesertaPutra
+    .map((nama, idx) => {
+      const check = checkParticipantAgeOnOct30(formData.tanggalLahirPutra[idx]);
+      return check.isOver16
+        ? `Peserta Putra ${idx + 1} (${nama.trim() || 'Tanpa Nama'}): ${check.statusText}`
+        : null;
+    })
+    .filter((v): v is string => v !== null);
+
+  const rejectedPutriList = formData.pesertaPutri
+    .map((nama, idx) => {
+      const check = checkParticipantAgeOnOct30(formData.tanggalLahirPutri[idx]);
+      return check.isOver16
+        ? `Peserta Putri ${idx + 1} (${nama.trim() || 'Tanpa Nama'}): ${check.statusText}`
+        : null;
+    })
+    .filter((v): v is string => v !== null);
+
+  const hasOverAgeParticipant = rejectedPutraList.length > 0 || rejectedPutriList.length > 0;
+
   // Completion status checks (11 school & leader fields + 8 Putra + 8 Putri + 1 Bukti Bayar = 28 fields)
   const isSchoolAndLeadersComplete =
     formData.namaSekolah.trim() !== '' &&
@@ -349,8 +474,8 @@ export default function App() {
     formData.namaPembinaPutri2.trim() !== '' &&
     formData.nipPembinaPutri2.trim() !== '';
 
-  const filledPutraCount = formData.pesertaPutra.filter((n) => n.trim() !== '').length;
-  const filledPutriCount = formData.pesertaPutri.filter((n) => n.trim() !== '').length;
+  const filledPutraCount = validPutraCount;
+  const filledPutriCount = validPutriCount;
   const isPutraComplete = filledPutraCount === 8;
   const isPutriComplete = filledPutriCount === 8;
   const isPaymentComplete = formData.buktiPembayaran !== null;
@@ -410,6 +535,36 @@ export default function App() {
       );
     }
 
+    const emptyTtlPutraIndices = formData.pesertaPutra
+      .map((_, i) =>
+        !formData.tempatLahirPutra[i]?.trim() || !formData.tanggalLahirPutra[i]?.trim()
+          ? i + 1
+          : null
+      )
+      .filter((v): v is number => v !== null);
+    if (emptyTtlPutraIndices.length > 0) {
+      errors.push(
+        `Tempat & Tanggal Lahir Peserta Putra belum lengkap (Nomor ${emptyTtlPutraIndices.join(', ')} masih kosong).`
+      );
+    }
+
+    formData.tanggalLahirPutra.forEach((tgl, i) => {
+      if (tgl?.trim()) {
+        const check = checkParticipantAgeOnOct30(tgl);
+        if (check.isOver16) {
+          errors.push(
+            `PENDAFTARAN DITOLAK — Peserta Putra ${i + 1} (${
+              formData.pesertaPutra[i]?.trim() || 'Tanpa Nama'
+            }): Usia melewati batas maksimal 16 tahun pada 30 Oktober (${check.years} thn ${
+              check.months
+            } bln ${check.days} hr).`
+          );
+        } else if (!check.isValid) {
+          errors.push(`Tanggal lahir Peserta Putra ${i + 1} tidak valid.`);
+        }
+      }
+    });
+
     const emptyPutriIndices = formData.pesertaPutri
       .map((val, i) => (val.trim() === '' ? i + 1 : null))
       .filter((v): v is number => v !== null);
@@ -418,6 +573,36 @@ export default function App() {
         `Nama Peserta Putri belum lengkap (Nomor ${emptyPutriIndices.join(', ')} masih kosong). Wajib 8 peserta.`
       );
     }
+
+    const emptyTtlPutriIndices = formData.pesertaPutri
+      .map((_, i) =>
+        !formData.tempatLahirPutri[i]?.trim() || !formData.tanggalLahirPutri[i]?.trim()
+          ? i + 1
+          : null
+      )
+      .filter((v): v is number => v !== null);
+    if (emptyTtlPutriIndices.length > 0) {
+      errors.push(
+        `Tempat & Tanggal Lahir Peserta Putri belum lengkap (Nomor ${emptyTtlPutriIndices.join(', ')} masih kosong).`
+      );
+    }
+
+    formData.tanggalLahirPutri.forEach((tgl, i) => {
+      if (tgl?.trim()) {
+        const check = checkParticipantAgeOnOct30(tgl);
+        if (check.isOver16) {
+          errors.push(
+            `PENDAFTARAN DITOLAK — Peserta Putri ${i + 1} (${
+              formData.pesertaPutri[i]?.trim() || 'Tanpa Nama'
+            }): Usia melewati batas maksimal 16 tahun pada 30 Oktober (${check.years} thn ${
+              check.months
+            } bln ${check.days} hr).`
+          );
+        } else if (!check.isValid) {
+          errors.push(`Tanggal lahir Peserta Putri ${i + 1} tidak valid.`);
+        }
+      }
+    });
 
     if (!formData.buktiPembayaran) {
       errors.push(
@@ -975,7 +1160,7 @@ export default function App() {
                       required
                       value={formData.namaSekolah}
                       onChange={(e) => handleInputChange('namaSekolah', e.target.value)}
-                      placeholder="Contoh: SMP Negeri 1 Muara Kaman / SDN 001 Muara Kaman"
+                      placeholder="Contoh: SMP Negeri 6 Muara Kaman"
                       className="w-full min-h-[52px] px-4 py-3 text-base rounded-2xl bg-[#FAF7F2] border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:bg-white focus:border-[#4A2C11] focus:ring-3 focus:ring-[#4A2C11]/15 focus:outline-none transition-all"
                     />
                   </div>
@@ -1262,7 +1447,8 @@ export default function App() {
                       02. Daftar Nama Peserta Putra (8 Orang)
                     </h2>
                     <p className="text-xs text-red-100">
-                      Masukkan 8 nama lengkap anggota Regu Putra ({filledPutraCount}/8 terisi)
+                      Masukkan 8 nama lengkap beserta Tempat & Tanggal Lahir ({filledPutraCount}/8
+                      memenuhi syarat)
                     </p>
                   </div>
                 </div>
@@ -1309,49 +1495,77 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="max-w-md space-y-1.5">
-                  <label
-                    htmlFor="namaReguPutra"
-                    className="block text-xs font-semibold text-[#6B5744]"
-                  >
-                    Nama Regu Putra (Opsional — Contoh: Regu Elang / Rajawali)
-                  </label>
-                  <input
-                    id="namaReguPutra"
-                    type="text"
-                    value={formData.namaReguPutra}
-                    onChange={(e) => handleInputChange('namaReguPutra', e.target.value)}
-                    placeholder="Ketik nama hewan / regu putra (opsional)"
-                    className="w-full min-h-[48px] px-4 py-2.5 text-base rounded-xl bg-[#FAF7F2] border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:bg-white focus:border-[#8B1E1E] focus:outline-none"
-                  />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch bg-[#FAF7F2] p-4 sm:p-5 rounded-2xl border border-[#E5DEC9]">
+                  <div className="lg:col-span-6 space-y-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-1">
+                      <label
+                        htmlFor="namaReguPutra"
+                        className="block text-sm font-bold text-[#23170D]"
+                      >
+                        Nama Regu Putra <span className="text-xs font-normal text-[#6B5744]">(Opsional)</span>
+                      </label>
+                      <span className="text-xs text-[#6B5744]">
+                        Contoh: Regu Elang / Rajawali
+                      </span>
+                    </div>
+                    <input
+                      id="namaReguPutra"
+                      type="text"
+                      value={formData.namaReguPutra}
+                      onChange={(e) => handleInputChange('namaReguPutra', e.target.value)}
+                      placeholder="Ketik nama hewan / regu putra (opsional)"
+                      className="w-full min-h-[48px] px-4 py-2.5 text-sm sm:text-base rounded-xl bg-white border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:border-[#8B1E1E] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="lg:col-span-6 p-3.5 rounded-xl bg-white border border-[#D8CEBE] flex flex-col justify-center text-xs sm:text-sm text-[#4A2C11] leading-relaxed">
+                    <span className="font-bold text-[#8B1E1E]">
+                      Ketentuan Usia Peserta Putra:
+                    </span>
+                    <span>
+                      Maksimal <strong>16 Tahun</strong> pada <strong>30 Oktober 2026</strong> (Lahir paling awal{' '}
+                      <span className="font-mono-num font-bold">30 Oktober 2010</span>). Jika lewat 16 tahun otomatis ditolak.
+                    </span>
+                  </div>
                 </div>
 
-                {/* 8 Kolom Input Peserta Putra */}
+                {/* 8 Kolom Input Peserta Putra (Nama + Tempat Lahir + Tanggal Lahir) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                  {formData.pesertaPutra.map((nama, index) => (
-                    <div key={`putra-${index}`} className="space-y-1.5">
-                      <label
-                        htmlFor={`pesertaPutra-${index}`}
-                        className="flex items-center justify-between text-sm font-bold text-[#23170D]"
+                  {formData.pesertaPutra.map((nama, index) => {
+                    const ageCheck = checkParticipantAgeOnOct30(formData.tanggalLahirPutra[index]);
+                    return (
+                      <div
+                        key={`putra-${index}`}
+                        className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                          ageCheck.isOver16
+                            ? 'bg-red-50/90 border-2 border-[#DC2626]'
+                            : 'bg-[#FAF7F2]/60 border-[#E5DEC9]'
+                        }`}
                       >
-                        <span>
-                          Nama Peserta Putra {index + 1} <span className="text-[#C81E1E]">*</span>
-                        </span>
-                        {index === 0 && (
-                          <span className="text-xs font-medium text-[#8B1E1E]">
-                            Pemimpin Regu (Pinru)
+                        <label
+                          htmlFor={`pesertaPutra-${index}`}
+                          className="flex items-center justify-between text-sm font-bold text-[#23170D]"
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-lg bg-[#8B1E1E] text-white font-mono-num text-xs font-bold flex items-center justify-center shrink-0">
+                              {index + 1}
+                            </span>
+                            <span>
+                              Peserta Putra {index + 1} <span className="text-[#C81E1E]">*</span>
+                            </span>
                           </span>
-                        )}
-                        {index === 1 && (
-                          <span className="text-xs font-medium text-[#6B5744]">
-                            Wakil Pinru (Wapinru)
-                          </span>
-                        )}
-                      </label>
-                      <div className="relative flex items-center">
-                        <span className="absolute left-3.5 w-7 h-7 rounded-lg bg-[#8B1E1E] text-white font-mono-num text-xs font-bold flex items-center justify-center pointer-events-none">
-                          {index + 1}
-                        </span>
+                          {index === 0 && (
+                            <span className="text-xs font-semibold text-[#8B1E1E]">
+                              Pemimpin Regu (Pinru)
+                            </span>
+                          )}
+                          {index === 1 && (
+                            <span className="text-xs font-semibold text-[#6B5744]">
+                              Wakil Pinru (Wapinru)
+                            </span>
+                          )}
+                        </label>
+
                         <input
                           id={`pesertaPutra-${index}`}
                           type="text"
@@ -1360,12 +1574,73 @@ export default function App() {
                           onChange={(e) =>
                             handleParticipantChange('putra', index, e.target.value)
                           }
-                          placeholder={`Ketik nama lengkap Peserta Putra ${index + 1}`}
-                          className="w-full min-h-[52px] pl-13 pr-4 py-3 text-base rounded-2xl bg-[#FAF7F2] border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:bg-white focus:border-[#8B1E1E] focus:ring-3 focus:ring-[#8B1E1E]/15 focus:outline-none transition-all"
+                          placeholder={`Nama lengkap Peserta Putra ${index + 1}`}
+                          className="w-full min-h-[48px] px-3.5 py-2.5 text-sm sm:text-base rounded-xl bg-white border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:border-[#8B1E1E] focus:ring-2 focus:ring-[#8B1E1E]/15 focus:outline-none transition-all"
                         />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div className="space-y-1">
+                            <label
+                              htmlFor={`tempatLahirPutra-${index}`}
+                              className="block text-xs font-semibold text-[#5C4328]"
+                            >
+                              Tempat Lahir <span className="text-[#C81E1E]">*</span>
+                            </label>
+                            <input
+                              id={`tempatLahirPutra-${index}`}
+                              type="text"
+                              required
+                              value={formData.tempatLahirPutra[index] || ''}
+                              onChange={(e) =>
+                                handleTempatLahirChange('putra', index, e.target.value)
+                              }
+                              placeholder="Contoh: Muara Kaman"
+                              className="w-full min-h-[44px] px-3 py-2 text-sm rounded-xl bg-white border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:border-[#8B1E1E] focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label
+                              htmlFor={`tanggalLahirPutra-${index}`}
+                              className="block text-xs font-semibold text-[#5C4328]"
+                            >
+                              Tanggal Lahir <span className="text-[#C81E1E]">*</span>
+                            </label>
+                            <input
+                              id={`tanggalLahirPutra-${index}`}
+                              type="date"
+                              required
+                              max="2026-10-30"
+                              value={formData.tanggalLahirPutra[index] || ''}
+                              onChange={(e) =>
+                                handleTanggalLahirChange('putra', index, e.target.value)
+                              }
+                              className={`w-full min-h-[44px] px-3 py-2 text-sm font-mono-num rounded-xl bg-white border focus:outline-none ${
+                                ageCheck.isOver16
+                                  ? 'border-[#DC2626] text-[#991B1B] font-bold'
+                                  : 'border-[#D8CEBE] text-[#23170D] focus:border-[#8B1E1E]'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {ageCheck.hasDate && (
+                          <div
+                            className={`text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5 ${
+                              ageCheck.isOver16
+                                ? 'bg-[#DC2626] text-white'
+                                : ageCheck.isValid
+                                ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
+                                : 'bg-amber-50 text-amber-800 border border-amber-300'
+                            }`}
+                          >
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{ageCheck.statusText}</span>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -1385,7 +1660,8 @@ export default function App() {
                       03. Daftar Nama Peserta Putri (8 Orang)
                     </h2>
                     <p className="text-xs text-purple-100">
-                      Masukkan 8 nama lengkap anggota Regu Putri ({filledPutriCount}/8 terisi)
+                      Masukkan 8 nama lengkap beserta Tempat & Tanggal Lahir ({filledPutriCount}/8
+                      memenuhi syarat)
                     </p>
                   </div>
                 </div>
@@ -1432,49 +1708,77 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="max-w-md space-y-1.5">
-                  <label
-                    htmlFor="namaReguPutri"
-                    className="block text-xs font-semibold text-[#6B5744]"
-                  >
-                    Nama Regu Putri (Opsional — Contoh: Regu Melati / Anggrek)
-                  </label>
-                  <input
-                    id="namaReguPutri"
-                    type="text"
-                    value={formData.namaReguPutri}
-                    onChange={(e) => handleInputChange('namaReguPutri', e.target.value)}
-                    placeholder="Ketik nama bunga / regu putri (opsional)"
-                    className="w-full min-h-[48px] px-4 py-2.5 text-base rounded-xl bg-[#FAF7F2] border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:bg-white focus:border-[#4B1E78] focus:outline-none"
-                  />
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch bg-[#FAF7F2] p-4 sm:p-5 rounded-2xl border border-[#E5DEC9]">
+                  <div className="lg:col-span-6 space-y-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-1">
+                      <label
+                        htmlFor="namaReguPutri"
+                        className="block text-sm font-bold text-[#23170D]"
+                      >
+                        Nama Regu Putri <span className="text-xs font-normal text-[#6B5744]">(Opsional)</span>
+                      </label>
+                      <span className="text-xs text-[#6B5744]">
+                        Contoh: Regu Melati / Anggrek
+                      </span>
+                    </div>
+                    <input
+                      id="namaReguPutri"
+                      type="text"
+                      value={formData.namaReguPutri}
+                      onChange={(e) => handleInputChange('namaReguPutri', e.target.value)}
+                      placeholder="Ketik nama bunga / regu putri (opsional)"
+                      className="w-full min-h-[48px] px-4 py-2.5 text-sm sm:text-base rounded-xl bg-white border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:border-[#4B1E78] focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="lg:col-span-6 p-3.5 rounded-xl bg-white border border-[#D8CEBE] flex flex-col justify-center text-xs sm:text-sm text-[#4B1E78] leading-relaxed">
+                    <span className="font-bold text-[#4B1E78]">
+                      Ketentuan Usia Peserta Putri:
+                    </span>
+                    <span>
+                      Maksimal <strong>16 Tahun</strong> pada <strong>30 Oktober 2026</strong> (Lahir paling awal{' '}
+                      <span className="font-mono-num font-bold">30 Oktober 2010</span>). Jika lewat 16 tahun otomatis ditolak.
+                    </span>
+                  </div>
                 </div>
 
-                {/* 8 Kolom Input Peserta Putri */}
+                {/* 8 Kolom Input Peserta Putri (Nama + Tempat Lahir + Tanggal Lahir) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-                  {formData.pesertaPutri.map((nama, index) => (
-                    <div key={`putri-${index}`} className="space-y-1.5">
-                      <label
-                        htmlFor={`pesertaPutri-${index}`}
-                        className="flex items-center justify-between text-sm font-bold text-[#23170D]"
+                  {formData.pesertaPutri.map((nama, index) => {
+                    const ageCheck = checkParticipantAgeOnOct30(formData.tanggalLahirPutri[index]);
+                    return (
+                      <div
+                        key={`putri-${index}`}
+                        className={`p-4 rounded-2xl border space-y-3 transition-all ${
+                          ageCheck.isOver16
+                            ? 'bg-red-50/90 border-2 border-[#DC2626]'
+                            : 'bg-[#FAF7F2]/60 border-[#E5DEC9]'
+                        }`}
                       >
-                        <span>
-                          Nama Peserta Putri {index + 1} <span className="text-[#C81E1E]">*</span>
-                        </span>
-                        {index === 0 && (
-                          <span className="text-xs font-medium text-[#4B1E78]">
-                            Pemimpin Regu (Pinru)
+                        <label
+                          htmlFor={`pesertaPutri-${index}`}
+                          className="flex items-center justify-between text-sm font-bold text-[#23170D]"
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className="w-6 h-6 rounded-lg bg-[#4B1E78] text-white font-mono-num text-xs font-bold flex items-center justify-center shrink-0">
+                              {index + 1}
+                            </span>
+                            <span>
+                              Peserta Putri {index + 1} <span className="text-[#C81E1E]">*</span>
+                            </span>
                           </span>
-                        )}
-                        {index === 1 && (
-                          <span className="text-xs font-medium text-[#6B5744]">
-                            Wakil Pinru (Wapinru)
-                          </span>
-                        )}
-                      </label>
-                      <div className="relative flex items-center">
-                        <span className="absolute left-3.5 w-7 h-7 rounded-lg bg-[#4B1E78] text-white font-mono-num text-xs font-bold flex items-center justify-center pointer-events-none">
-                          {index + 1}
-                        </span>
+                          {index === 0 && (
+                            <span className="text-xs font-semibold text-[#4B1E78]">
+                              Pemimpin Regu (Pinru)
+                            </span>
+                          )}
+                          {index === 1 && (
+                            <span className="text-xs font-semibold text-[#6B5744]">
+                              Wakil Pinru (Wapinru)
+                            </span>
+                          )}
+                        </label>
+
                         <input
                           id={`pesertaPutri-${index}`}
                           type="text"
@@ -1483,12 +1787,73 @@ export default function App() {
                           onChange={(e) =>
                             handleParticipantChange('putri', index, e.target.value)
                           }
-                          placeholder={`Ketik nama lengkap Peserta Putri ${index + 1}`}
-                          className="w-full min-h-[52px] pl-13 pr-4 py-3 text-base rounded-2xl bg-[#FAF7F2] border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:bg-white focus:border-[#4B1E78] focus:ring-3 focus:ring-[#4B1E78]/15 focus:outline-none transition-all"
+                          placeholder={`Nama lengkap Peserta Putri ${index + 1}`}
+                          className="w-full min-h-[48px] px-3.5 py-2.5 text-sm sm:text-base rounded-xl bg-white border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:border-[#4B1E78] focus:ring-2 focus:ring-[#4B1E78]/15 focus:outline-none transition-all"
                         />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          <div className="space-y-1">
+                            <label
+                              htmlFor={`tempatLahirPutri-${index}`}
+                              className="block text-xs font-semibold text-[#5C4328]"
+                            >
+                              Tempat Lahir <span className="text-[#C81E1E]">*</span>
+                            </label>
+                            <input
+                              id={`tempatLahirPutri-${index}`}
+                              type="text"
+                              required
+                              value={formData.tempatLahirPutri[index] || ''}
+                              onChange={(e) =>
+                                handleTempatLahirChange('putri', index, e.target.value)
+                              }
+                              placeholder="Contoh: Muara Kaman"
+                              className="w-full min-h-[44px] px-3 py-2 text-sm rounded-xl bg-white border border-[#D8CEBE] text-[#23170D] placeholder:text-[#8C735B] focus:border-[#4B1E78] focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label
+                              htmlFor={`tanggalLahirPutri-${index}`}
+                              className="block text-xs font-semibold text-[#5C4328]"
+                            >
+                              Tanggal Lahir <span className="text-[#C81E1E]">*</span>
+                            </label>
+                            <input
+                              id={`tanggalLahirPutri-${index}`}
+                              type="date"
+                              required
+                              max="2026-10-30"
+                              value={formData.tanggalLahirPutri[index] || ''}
+                              onChange={(e) =>
+                                handleTanggalLahirChange('putri', index, e.target.value)
+                              }
+                              className={`w-full min-h-[44px] px-3 py-2 text-sm font-mono-num rounded-xl bg-white border focus:outline-none ${
+                                ageCheck.isOver16
+                                  ? 'border-[#DC2626] text-[#991B1B] font-bold'
+                                  : 'border-[#D8CEBE] text-[#23170D] focus:border-[#4B1E78]'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {ageCheck.hasDate && (
+                          <div
+                            className={`text-xs font-semibold px-3 py-2 rounded-xl flex items-center gap-1.5 ${
+                              ageCheck.isOver16
+                                ? 'bg-[#DC2626] text-white'
+                                : ageCheck.isValid
+                                ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
+                                : 'bg-amber-50 text-amber-800 border border-amber-300'
+                            }`}
+                          >
+                            <AlertCircle className="w-4 h-4 shrink-0" />
+                            <span>{ageCheck.statusText}</span>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </section>
@@ -1791,14 +2156,43 @@ export default function App() {
                 </div>
               </label>
 
+              {hasOverAgeParticipant && (
+                <div
+                  role="alert"
+                  className="bg-[#FEF2F2] border-2 border-[#DC2626] rounded-2xl p-4 sm:p-5 text-[#7F1D1D] space-y-2"
+                >
+                  <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-[#DC2626]">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <span>
+                      Pendaftaran Otomatis Ditolak: Ada Peserta Melewati Batas Usia 16 Tahun (30
+                      Oktober 2026)
+                    </span>
+                  </div>
+                  <ul className="list-disc list-inside text-xs sm:text-sm space-y-1">
+                    {[...rejectedPutraList, ...rejectedPutriList].map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {/* Tombol Utama Kirim Formulir (Ukuran Besar & Nyaman untuk Ibu Jari) */}
               <div className="pt-2 space-y-4">
                 <button
                   type="submit"
-                  className="w-full min-h-[60px] px-6 py-4 rounded-2xl bg-[#C81E1E] hover:bg-[#A51717] text-white font-bold text-base sm:text-lg flex items-center justify-center gap-3 shadow-md active:scale-[0.99] transition-all cursor-pointer"
+                  disabled={hasOverAgeParticipant}
+                  className={`w-full min-h-[60px] px-6 py-4 rounded-2xl font-bold text-base sm:text-lg flex items-center justify-center gap-3 shadow-md transition-all ${
+                    hasOverAgeParticipant
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                      : 'bg-[#C81E1E] hover:bg-[#A51717] text-white active:scale-[0.99] cursor-pointer'
+                  }`}
                 >
                   <Send className="w-6 h-6 shrink-0" />
-                  <span>Kirim Formulir Pendaftaran</span>
+                  <span>
+                    {hasOverAgeParticipant
+                      ? 'Pendaftaran Ditolak (Usia Peserta > 16 Tahun pada 30 Oktober)'
+                      : 'Kirim Formulir Pendaftaran'}
+                  </span>
                 </button>
 
                 {/* Box Informasi Konfirmasi WhatsApp Panitia */}
