@@ -218,34 +218,34 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
           return (
             <div key={card.id} className="flex flex-col items-center space-y-3">
               {/* PORTRAIT ID CARD CONTAINER (Matches renderIdCardToCanvas 1:1) */}
-              <div className="w-full max-w-[330px] aspect-[900/1380] rounded-3xl bg-[#FAF7F2] border-[3px] border-[#4A2C11] shadow-md overflow-hidden flex flex-col justify-between relative">
+              <div className="w-full max-w-[345px] aspect-[900/1380] rounded-3xl bg-[#FAF7F2] border-[3px] border-[#4A2C11] shadow-md overflow-hidden flex flex-col justify-between relative">
                 {/* TOP HEADER BLOCK */}
                 <div>
                   <div
-                    className={`bg-gradient-to-b ${headerGradient} px-4 pt-3 pb-4 text-white text-center relative`}
+                    className={`bg-gradient-to-b ${headerGradient} px-3.5 pt-3 pb-3.5 text-white text-center relative`}
                   >
                     {/* Lanyard Hole Visual */}
-                    <div className="w-11 h-2 rounded-full bg-[#FAF7F2] mx-auto mb-2.5 shadow-inner" />
+                    <div className="w-12 h-2 rounded-full bg-[#FAF7F2] mx-auto mb-2 shadow-inner" />
 
                     <div className="flex items-center justify-between gap-2">
-                      <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
-                        <TunasKelapaLogo className="w-6 h-8 text-[#23170D]" />
+                      <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
+                        <TunasKelapaLogo className="w-7 h-8 text-[#23170D]" />
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="text-[9px] font-bold tracking-wider text-[#F3D299] leading-tight">
+                        <p className="text-[10.5px] font-extrabold tracking-wide text-[#F3D299] leading-tight">
                           GERAKAN PRAMUKA KWARRAN
                         </p>
-                        <p className="text-[10px] font-bold tracking-wider text-[#F3D299] leading-tight">
+                        <p className="text-[11px] font-extrabold tracking-wide text-[#F3D299] leading-tight mt-0.5">
                           KECAMATAN MUARA KAMAN
                         </p>
-                        <h4 className="text-sm font-extrabold tracking-tight text-white mt-0.5 leading-tight">
+                        <h4 className="text-[16px] font-extrabold tracking-tight text-white mt-1 leading-none">
                           PESTA PENGGALANG
                         </h4>
                       </div>
 
-                      <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
-                        <WosmLogo className="w-7 h-7" />
+                      <div className="w-10 h-10 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
+                        <WosmLogo className="w-8 h-8" />
                       </div>
                     </div>
                   </div>
@@ -257,12 +257,12 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
                   </div>
                 </div>
 
-                {/* CENTER 4x6 ROUNDED PHOTO FRAME & IDENTITY */}
-                <div className="px-5 py-2.5 flex-1 flex flex-col items-center justify-center text-center">
-                  {/* 4x6 Portrait Photo Frame with All Corners Rounded (w-[88px] h-[132px] = exact 4:6 ratio) */}
-                  <div className="relative group mb-2.5">
+                {/* CENTER WIDENED ROUNDED PHOTO FRAME & ENLARGED IDENTITY TEXT */}
+                <div className="px-4 py-2.5 flex-1 flex flex-col items-center justify-between text-center">
+                  {/* Widened Portrait Photo Frame with All Corners Rounded */}
+                  <div className="relative group mt-0.5">
                     <div
-                      className={`w-[88px] h-[132px] rounded-2xl border-4 ${frameBorderColor} bg-white shadow-sm overflow-hidden flex items-center justify-center`}
+                      className={`w-[116px] h-[148px] rounded-2xl border-4 ${frameBorderColor} bg-white shadow-sm overflow-hidden flex items-center justify-center`}
                     >
                       {card.customPhotoUrl ? (
                         <img
@@ -271,15 +271,15 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="flex flex-col items-center justify-center text-[#4A2C11] px-1">
-                          <span className="text-2xl font-extrabold tracking-tight">
+                        <div className="flex flex-col items-center justify-center text-[#4A2C11] px-2">
+                          <span className="text-3xl font-extrabold tracking-tight">
                             {initials || 'GP'}
                           </span>
-                          <span className="text-[8.5px] font-bold text-[#7A5C3E] mt-0.5">
+                          <span className="text-[10px] font-extrabold text-[#7A5C3E] mt-1">
                             PRAMUKA
                           </span>
-                          <span className="text-[7.5px] font-semibold text-[#A38B73] mt-0.5">
-                            FOTO 4x6
+                          <span className="text-[9px] font-semibold text-[#A38B73] mt-0.5">
+                            PASFOTO 4x6
                           </span>
                         </div>
                       )}
@@ -302,32 +302,34 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
                     </label>
                   </div>
 
-                  {/* Role / Category Ribbon */}
-                  <div
-                    className={`px-3.5 py-0.5 rounded-full text-[9.5px] font-extrabold tracking-wider ${roleBadgeBg} shadow-2xs`}
-                  >
-                    {card.kategori}
+                  {/* Role / Category Ribbon & Name Block */}
+                  <div className="w-full flex flex-col items-center my-1">
+                    <div
+                      className={`px-4 py-1 rounded-full text-[11px] font-extrabold tracking-wider ${roleBadgeBg} shadow-2xs`}
+                    >
+                      {card.kategori}
+                    </div>
+
+                    {/* Full Name (Enlarged & Adjusted) */}
+                    <h5 className="mt-1.5 text-[16.5px] font-extrabold text-[#23170D] leading-tight line-clamp-2 px-1">
+                      {card.nama}
+                    </h5>
+
+                    {/* Jabatan / Peran (Enlarged) */}
+                    <p className="text-xs font-bold text-[#7A5C3E] mt-0.5">
+                      {card.jabatan}
+                    </p>
                   </div>
 
-                  {/* Full Name */}
-                  <h5 className="mt-1.5 text-sm font-extrabold text-[#23170D] leading-snug line-clamp-1">
-                    {card.nama}
-                  </h5>
-
-                  {/* Jabatan / Peran */}
-                  <p className="text-[11px] font-bold text-[#7A5C3E]">
-                    {card.jabatan}
-                  </p>
-
-                  {/* Details Table Card */}
-                  <div className="mt-2 w-full bg-white rounded-2xl border border-[#E5DEC9] p-2.5 text-left text-[10.5px] space-y-1 shadow-2xs">
-                    <div className="flex items-start justify-between gap-2 border-b border-[#F3ECE0] pb-1">
+                  {/* Details Table Card (Enlarged Text) */}
+                  <div className="w-full bg-white rounded-2xl border border-[#E5DEC9] px-3 py-2.5 text-left text-[12px] space-y-1.5 shadow-2xs">
+                    <div className="flex items-center justify-between gap-2 border-b border-[#F3ECE0] pb-1">
                       <span className="text-[#6B5744] font-semibold shrink-0">Pangkalan</span>
-                      <span className="font-bold text-[#23170D] text-right truncate">
+                      <span className="font-extrabold text-[#23170D] text-right truncate">
                         {card.namaSekolah}
                       </span>
                     </div>
-                    <div className="flex items-start justify-between gap-2 border-b border-[#F3ECE0] pb-1">
+                    <div className="flex items-center justify-between gap-2 border-b border-[#F3ECE0] pb-1">
                       <span className="text-[#6B5744] font-semibold shrink-0">
                         {card.nipAtauReguLabel}
                       </span>
@@ -337,23 +339,23 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
                     </div>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[#6B5744] font-semibold shrink-0">ID Kartu</span>
-                      <span className="font-mono-num font-bold text-[#4A2C11] text-right">
+                      <span className="font-mono-num font-extrabold text-[#4A2C11] text-right">
                         {card.nomorKartu}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* BOTTOM FOOTER BAND */}
+                {/* BOTTOM FOOTER BAND (Enlarged Text) */}
                 <div
-                  className={`bg-gradient-to-r ${headerGradient} py-2 px-3 text-center text-[8.5px] font-bold tracking-wider text-[#F3D299]`}
+                  className={`bg-gradient-to-r ${headerGradient} py-2.5 px-3 text-center text-[10px] font-extrabold tracking-wider text-[#F3D299]`}
                 >
                   PANITIA PESTA PENGGALANG KEC. MUARA KAMAN
                 </div>
               </div>
 
               {/* Action Buttons Under Each Card (PDF & PNG) */}
-              <div className="no-print w-full max-w-[330px] grid grid-cols-2 gap-2">
+              <div className="no-print w-full max-w-[345px] grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => handleDownloadSinglePdf(card)}

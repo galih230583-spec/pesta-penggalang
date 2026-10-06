@@ -521,17 +521,17 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
     ctx.drawImage(wosmImg, rightBoxX + 12, boxY + 12, 80, 80);
   }
 
-  // Center Header Titles
+  // Center Header Titles (Enlarged & Adjusted)
   ctx.textAlign = 'center';
   ctx.fillStyle = '#F3D299';
-  ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('GERAKAN PRAMUKA KWARRAN', width / 2, 108);
-  ctx.font = 'bold 25px "Plus Jakarta Sans", sans-serif';
+  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('GERAKAN PRAMUKA KWARRAN', width / 2, 106);
+  ctx.font = '800 27px "Plus Jakarta Sans", sans-serif';
   ctx.fillText('KECAMATAN MUARA KAMAN', width / 2, 140);
 
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '800 38px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('PESTA PENGGALANG', width / 2, 190);
+  ctx.font = '800 42px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('PESTA PENGGALANG', width / 2, 194);
 
   // 2. PITA MERAH PUTIH KACU PRAMUKA (Left 50% Red, Right 50% White)
   const ribbonY = headerH;
@@ -547,12 +547,12 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   ctx.lineTo(width, ribbonY + ribbonH);
   ctx.stroke();
 
-  // 3. 4x6 PORTRAIT PHOTO FRAME WITH ALL CORNERS ROUNDED (Exact 4:6 / 2:3 ratio)
-  const photoW = 240;
-  const photoH = 360; // 240 x 360 = exact 4x6 ratio!
+  // 3. WIDENED PORTRAIT PHOTO FRAME WITH ALL CORNERS ROUNDED (Matches w-[116px] h-[148px] in preview)
+  const photoW = 300;
+  const photoH = 384;
   const photoX = (width - photoW) / 2;
-  const photoY = 328;
-  const photoRadius = 34;
+  const photoY = 318;
+  const photoRadius = 38;
 
   // Draw white inner background & clip for photo
   ctx.save();
@@ -577,7 +577,7 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
       );
     }
   } else {
-    // Same placeholder as preview: Initials + PRAMUKA + Foto 4x6
+    // Same placeholder as preview: Initials + PRAMUKA + PASFOTO 4x6
     const initials = card.nama
       .split(' ')
       .filter(Boolean)
@@ -586,57 +586,57 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
       .join('');
     ctx.textAlign = 'center';
     ctx.fillStyle = '#4A2C11';
-    ctx.font = '800 76px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(initials || 'GP', width / 2, photoY + 175);
+    ctx.font = '800 84px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(initials || 'GP', width / 2, photoY + 185);
 
     ctx.fillStyle = '#7A5C3E';
-    ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('PRAMUKA', width / 2, photoY + 225);
+    ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('PRAMUKA', width / 2, photoY + 238);
 
     ctx.fillStyle = '#A38B73';
-    ctx.font = '600 20px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('FOTO 4x6', width / 2, photoY + 265);
+    ctx.font = '600 23px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('PASFOTO 4x6', width / 2, photoY + 280);
   }
   ctx.restore();
 
-  // Rounded border around 4x6 frame
+  // Rounded border around frame
   ctx.beginPath();
   ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
   ctx.lineWidth = 10;
   ctx.strokeStyle = colors.frameBorder;
   ctx.stroke();
 
-  // 4. ROLE / CATEGORY PILL
-  const pillY = 716;
-  const pillW = 360;
-  const pillH = 56;
+  // 4. ROLE / CATEGORY PILL (Enlarged)
+  const pillY = 724;
+  const pillW = 390;
+  const pillH = 60;
   ctx.fillStyle = colors.roleBadge;
   ctx.beginPath();
-  ctx.roundRect((width - pillW) / 2, pillY, pillW, pillH, 28);
+  ctx.roundRect((width - pillW) / 2, pillY, pillW, pillH, 30);
   ctx.fill();
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.kategori, width / 2, pillY + 37);
+  ctx.font = '800 29px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.kategori, width / 2, pillY + 40);
 
-  // 5. FULL NAME & JABATAN
+  // 5. FULL NAME & JABATAN (Enlarged & Adjusted)
   ctx.fillStyle = '#23170D';
-  ctx.font = '800 40px "Plus Jakarta Sans", sans-serif';
-  if (ctx.measureText(card.nama).width > 780) {
-    ctx.font = '800 32px "Plus Jakarta Sans", sans-serif';
+  ctx.font = '800 45px "Plus Jakarta Sans", sans-serif';
+  if (ctx.measureText(card.nama).width > 800) {
+    ctx.font = '800 36px "Plus Jakarta Sans", sans-serif';
   }
-  ctx.fillText(card.nama, width / 2, 828);
+  ctx.fillText(card.nama, width / 2, 838);
 
   ctx.fillStyle = '#7A5C3E';
-  ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.jabatan, width / 2, 872);
+  ctx.font = 'bold 31px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.jabatan, width / 2, 884);
 
-  // 6. DETAILS TABLE CARD (White rounded-2xl card)
-  const tableX = 56;
-  const tableY = 910;
-  const tableW = width - 112;
-  const tableH = 315;
+  // 6. DETAILS TABLE CARD (Enlarged Text)
+  const tableX = 46;
+  const tableY = 916;
+  const tableW = width - 92;
+  const tableH = 330;
 
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
@@ -652,50 +652,50 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   // Row 1: Pangkalan
   ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
-  ctx.font = '600 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('Pangkalan', leftPad, tableY + 72);
+  ctx.font = '600 30px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Pangkalan', leftPad, tableY + 76);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#23170D';
-  ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.namaSekolah, rightPad, tableY + 72);
+  ctx.font = '800 30px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.namaSekolah, rightPad, tableY + 76);
 
   ctx.strokeStyle = '#F3ECE0';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(leftPad, tableY + 105);
-  ctx.lineTo(rightPad, tableY + 105);
+  ctx.moveTo(leftPad, tableY + 110);
+  ctx.lineTo(rightPad, tableY + 110);
   ctx.stroke();
 
   // Row 2: NIP / Regu
   ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
-  ctx.font = '600 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.nipAtauReguLabel, leftPad, tableY + 172);
+  ctx.font = '600 30px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.nipAtauReguLabel, leftPad, tableY + 180);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#23170D';
-  ctx.font = 'bold 26px "JetBrains Mono", monospace';
-  ctx.fillText(card.nipAtauReguValue, rightPad, tableY + 172);
+  ctx.font = 'bold 30px "JetBrains Mono", monospace';
+  ctx.fillText(card.nipAtauReguValue, rightPad, tableY + 180);
 
   ctx.beginPath();
-  ctx.moveTo(leftPad, tableY + 205);
-  ctx.lineTo(rightPad, tableY + 205);
+  ctx.moveTo(leftPad, tableY + 214);
+  ctx.lineTo(rightPad, tableY + 214);
   ctx.stroke();
 
   // Row 3: ID Kartu
   ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
-  ctx.font = '600 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('ID Kartu', leftPad, tableY + 270);
+  ctx.font = '600 30px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('ID Kartu', leftPad, tableY + 284);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#4A2C11';
-  ctx.font = 'bold 26px "JetBrains Mono", monospace';
-  ctx.fillText(card.nomorKartu, rightPad, tableY + 270);
+  ctx.font = '800 30px "JetBrains Mono", monospace';
+  ctx.fillText(card.nomorKartu, rightPad, tableY + 284);
 
-  // 7. BOTTOM FOOTER BAND
-  const footerH = 86;
+  // 7. BOTTOM FOOTER BAND (Enlarged Text)
+  const footerH = 92;
   const footerY = height - footerH;
   const footerGrad = ctx.createLinearGradient(0, footerY, width, footerY);
   footerGrad.addColorStop(0, colors.gradStart);
@@ -706,11 +706,11 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#F3D299';
-  ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
+  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
   ctx.fillText(
     'PANITIA PESTA PENGGALANG KEC. MUARA KAMAN',
     width / 2,
-    footerY + 52
+    footerY + 56
   );
 
   ctx.restore();
