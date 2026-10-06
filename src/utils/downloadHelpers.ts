@@ -1,3 +1,4 @@
+import { jsPDF } from 'jspdf';
 import {
   SubmittedRegistration,
   INFO_PEMBAYARAN,
@@ -17,6 +18,42 @@ export interface IdCardPerson {
   nomorRegistrasi: string;
   urutan: number;
   customPhotoUrl?: string;
+}
+
+const TUNAS_KELAPA_SVG = `<svg viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M14 114C14 114 22 86 52 86C78 86 90 105 90 118C90 134 76 149 52 149C26 149 14 123 14 114Z" fill="#23170D"/>
+  <path d="M11 114C11 110 18 102 25 97C20 108 20 120 25 131C18 126 11 118 11 114Z" fill="#23170D"/>
+  <path d="M84 112C88 94 78 76 70 58C63 42 66 26 71 17C74 28 77 38 78 46C80 30 82 14 87 4C89 20 98 38 99 56C100 72 93 86 95 104C96 112 94 119 88 123L84 112Z" fill="#23170D"/>
+  <path d="M86 119C91 128 96 141 101 153C102 156 99 158 96 156C88 150 84 137 80 125L86 119Z" fill="#23170D"/>
+</svg>`;
+
+const WOSM_SVG = `<svg viewBox="0 0 140 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="70" cy="68" r="58" stroke="#4B1E78" stroke-width="6.5" stroke-dasharray="10 4"/>
+  <circle cx="70" cy="68" r="55" stroke="#4B1E78" stroke-width="2"/>
+  <path d="M70 18C70 18 89 35 88 57C87 68 81 76 78 81H62C59 76 53 68 52 57C51 35 70 18 70 18Z" fill="#4B1E78"/>
+  <path d="M70 32V81" stroke="#FAF7F2" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M62 79C56 64 46 50 32 51C20 52 14 63 17 75C20 84 29 88 35 83C31 80 30 74 35 71C40 68 48 73 53 81H62Z" fill="#4B1E78"/>
+  <path d="M78 79C84 64 94 50 108 51C120 52 126 63 123 75C120 84 111 88 105 83C109 80 110 74 105 71C100 68 92 73 87 81H78Z" fill="#4B1E78"/>
+  <polygon points="31,61 32.8,65 37,65.5 33.8,68.3 34.8,72.5 31,70.2 27.2,72.5 28.2,68.3 25,65.5 29.2,65" fill="#FAF7F2"/>
+  <polygon points="109,61 110.8,65 115,65.5 111.8,68.3 112.8,72.5 109,70.2 105.2,72.5 106.2,68.3 103,65.5 107.2,65" fill="#FAF7F2"/>
+  <rect x="48" y="81" width="44" height="7" rx="3.5" fill="#4B1E78" stroke="#FAF7F2" stroke-width="2"/>
+  <path d="M63 89H77L82 104L70 116L58 104L63 89Z" fill="#4B1E78"/>
+  <path d="M55 89H62C61 98 56 105 47 107C43 108 40 104 42 100C46 102 52 97 55 89Z" fill="#4B1E78"/>
+  <path d="M85 89H78C79 98 84 105 93 107C97 108 100 104 98 100C94 102 88 97 85 89Z" fill="#4B1E78"/>
+  <path d="M70 89V111" stroke="#FAF7F2" stroke-width="2"/>
+  <path d="M52 125C56 119 66 119 72 125C78 131 86 131 90 125" stroke="#4B1E78" stroke-width="6.5" stroke-linecap="round"/>
+  <path d="M52 131C56 137 66 137 72 131C78 125 86 125 90 131" stroke="#4B1E78" stroke-width="6.5" stroke-linecap="round"/>
+  <path d="M53 129L43 142M87 129L97 142" stroke="#4B1E78" stroke-width="6" stroke-linecap="round"/>
+</svg>`;
+
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
 }
 
 export function buildIdCardsFromRegistration(reg: SubmittedRegistration): IdCardPerson[] {
@@ -134,36 +171,32 @@ export function downloadPaymentProofFile(reg: SubmittedRegistration): void {
 }
 
 /**
- * Renders a high-resolution PNG of the official Registration Receipt (Bukti Pendaftaran & Pembayaran)
- * so users on mobile or inside sandboxed iframes can save it directly as an image.
+ * Renders the Official Registration Receipt onto an HTML5 Canvas
  */
-export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<void> {
+async function renderReceiptToCanvas(reg: SubmittedRegistration): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   const width = 1200;
   const height = 1650;
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) return canvas;
 
-  // Background
   ctx.fillStyle = '#FAF7F2';
   ctx.fillRect(0, 0, width, height);
 
-  // Outer Card Border
   ctx.fillStyle = '#FFFFFF';
   ctx.strokeStyle = '#D8CEBE';
   ctx.lineWidth = 4;
   ctx.fillRect(40, 40, width - 80, height - 80);
   ctx.strokeRect(40, 40, width - 80, height - 80);
 
-  // Header Banner (Pramuka Dark Brown + Red Stripe)
+  // Header Banner
   ctx.fillStyle = '#4A2C11';
   ctx.fillRect(40, 40, width - 80, 170);
   ctx.fillStyle = '#C81E1E';
   ctx.fillRect(40, 210, width - 80, 12);
 
-  // Header Text
   ctx.fillStyle = '#F3D299';
   ctx.font = 'bold 20px sans-serif';
   ctx.fillText('GERAKAN PRAMUKA KWARTIR RANTING KECAMATAN MUARA KAMAN', 80, 95);
@@ -180,7 +213,7 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
     185
   );
 
-  // Section 1: Identitas Sekolah & Pembina
+  // Section 1
   let y = 270;
   ctx.fillStyle = '#4A2C11';
   ctx.font = 'bold 24px sans-serif';
@@ -195,7 +228,7 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
 
   const leftX = 105;
   const rightX = 630;
-  let rowY = y + 45;
+  const rowY = y + 45;
 
   ctx.fillStyle = '#6B5744';
   ctx.font = '17px sans-serif';
@@ -214,7 +247,6 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
   ctx.font = '16px monospace';
   ctx.fillText(`NIP: ${reg.nipKepalaSekolah}`, leftX, rowY + 134);
 
-  // Right column: Pembina Putra 1 & 2, Putri 1 & 2
   ctx.fillStyle = '#8B1E1E';
   ctx.font = 'bold 17px sans-serif';
   ctx.fillText('Pembina Pendamping Putra:', rightX, rowY);
@@ -239,14 +271,13 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
     rowY + 147
   );
 
-  // Section 2: Daftar Peserta Putra & Putri
+  // Section 2
   y = 605;
   ctx.fillStyle = '#4A2C11';
   ctx.font = 'bold 24px sans-serif';
   ctx.fillText('2. DAFTAR PESERTA REGU PUTRA (8) & REGU PUTRI (8)', 80, y);
 
   y += 20;
-  // Putra Box
   ctx.fillStyle = '#FAF7F2';
   ctx.fillRect(80, y, 500, 390);
   ctx.strokeRect(80, y, 500, 390);
@@ -266,7 +297,6 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
     ctx.fillText(`${idx + 1}. ${nama || '-'}${label}`, 105, y + 82 + idx * 38);
   });
 
-  // Putri Box
   ctx.fillStyle = '#FAF7F2';
   ctx.fillRect(620, y, 500, 390);
   ctx.strokeRect(620, y, 500, 390);
@@ -286,7 +316,7 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
     ctx.fillText(`${idx + 1}. ${nama || '-'}${label}`, 645, y + 82 + idx * 38);
   });
 
-  // Section 3: Rincian Pembayaran & Bukti Transfer
+  // Section 3
   y = 1065;
   ctx.fillStyle = '#14532D';
   ctx.font = 'bold 24px sans-serif';
@@ -327,43 +357,31 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
     y + 305
   );
 
-  // Draw payment proof image on right side if it's an image
   if (reg.buktiPembayaran && reg.buktiPembayaran.fileType.startsWith('image/')) {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
-        img.src = reg.buktiPembayaran!.dataUrl;
-      });
-      if (img.width > 0 && img.height > 0) {
-        const boxX = 680;
-        const boxY = y + 30;
-        const boxW = 410;
-        const boxH = 380;
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(boxX, boxY, boxW, boxH);
-        ctx.strokeStyle = '#D8CEBE';
-        ctx.strokeRect(boxX, boxY, boxW, boxH);
+    const img = await loadImage(reg.buktiPembayaran.dataUrl);
+    if (img && img.width > 0 && img.height > 0) {
+      const boxX = 680;
+      const boxY = y + 30;
+      const boxW = 410;
+      const boxH = 380;
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+      ctx.strokeStyle = '#D8CEBE';
+      ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-        const scale = Math.min((boxW - 20) / img.width, (boxH - 20) / img.height);
-        const drawW = img.width * scale;
-        const drawH = img.height * scale;
-        ctx.drawImage(
-          img,
-          boxX + (boxW - drawW) / 2,
-          boxY + (boxH - drawH) / 2,
-          drawW,
-          drawH
-        );
-      }
-    } catch {
-      // Ignore image draw failure
+      const scale = Math.min((boxW - 20) / img.width, (boxH - 20) / img.height);
+      const drawW = img.width * scale;
+      const drawH = img.height * scale;
+      ctx.drawImage(
+        img,
+        boxX + (boxW - drawW) / 2,
+        boxY + (boxH - drawH) / 2,
+        drawW,
+        drawH
+      );
     }
   }
 
-  // Footer
   ctx.fillStyle = '#6B5744';
   ctx.font = '16px sans-serif';
   ctx.fillText(
@@ -372,6 +390,30 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
     1575
   );
 
+  return canvas;
+}
+
+/**
+ * Downloads the Registration Receipt directly as a PDF (.pdf)
+ */
+export async function downloadReceiptAsPdf(reg: SubmittedRegistration): Promise<void> {
+  const canvas = await renderReceiptToCanvas(reg);
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+  pdf.addImage(imgData, 'JPEG', 5, 5, 200, 275);
+  const safeSchool = reg.namaSekolah.replace(/[^a-zA-Z0-9_-]/g, '_');
+  pdf.save(`Bukti_Pendaftaran_${safeSchool}.pdf`);
+}
+
+/**
+ * Downloads the Registration Receipt as PNG
+ */
+export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<void> {
+  const canvas = await renderReceiptToCanvas(reg);
   const dataUrl = canvas.toDataURL('image/png');
   const link = document.createElement('a');
   const safeSchool = reg.namaSekolah.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -383,242 +425,311 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
 }
 
 /**
- * Renders an individual Portrait ID Card (Kartu Nama Peserta / Pembina) onto a high-res PNG
- * and triggers an immediate file download.
+ * Renders an individual Portrait ID Card onto an HTML5 Canvas so that the visual result
+ * is 100% IDENTICAL to the React preview (including Tunas Kelapa + WOSM badges,
+ * Pita Merah-Putih Kacu, and 4x6 Photo Frame with All Corners Rounded).
  */
-export async function downloadIdCardAsPng(card: IdCardPerson): Promise<void> {
+export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   const width = 900;
-  const height = 1320;
+  const height = 1380;
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) return canvas;
 
-  // Determine theme colors by category
-  const theme =
-    card.kategori === 'PEMBINA PUTRA' || card.kategori === 'PEMBINA PUTRI'
-      ? {
-          headerBg: '#4A2C11',
-          subHeaderBg: '#B45309',
-          badgeBg: '#FEF3C7',
-          badgeText: '#92400E',
-          accent: '#D97706',
-          roleBar: '#4A2C11',
-        }
-      : card.kategori === 'PESERTA PUTRA'
-      ? {
-          headerBg: '#7F1D1D',
-          subHeaderBg: '#C81E1E',
-          badgeBg: '#FEE2E2',
-          badgeText: '#991B1B',
-          accent: '#C81E1E',
-          roleBar: '#8B1E1E',
-        }
-      : {
-          headerBg: '#4B1E78',
-          subHeaderBg: '#6B21A8',
-          badgeBg: '#F3E8FF',
-          badgeText: '#581C87',
-          accent: '#6B21A8',
-          roleBar: '#4B1E78',
-        };
+  const isPembina =
+    card.kategori === 'PEMBINA PUTRA' || card.kategori === 'PEMBINA PUTRI';
+  const isPutra = card.kategori === 'PESERTA PUTRA';
 
-  // Card base background
+  const colors = isPembina
+    ? {
+        gradStart: '#4A2C11',
+        gradMid: '#5C3614',
+        gradEnd: '#3B220C',
+        roleBadge: '#B45309',
+        frameBorder: '#D97706',
+      }
+    : isPutra
+    ? {
+        gradStart: '#7F1D1D',
+        gradMid: '#991B1B',
+        gradEnd: '#651515',
+        roleBadge: '#C81E1E',
+        frameBorder: '#C81E1E',
+      }
+    : {
+        gradStart: '#4B1E78',
+        gradMid: '#5B21B6',
+        gradEnd: '#3B1561',
+        roleBadge: '#6B21A8',
+        frameBorder: '#6B21A8',
+      };
+
+  // Clip entire card to rounded rectangle (matches rounded-3xl in preview)
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(0, 0, width, height, 56);
+  ctx.clip();
+
+  // Base cream background (#FAF7F2)
   ctx.fillStyle = '#FAF7F2';
   ctx.fillRect(0, 0, width, height);
 
-  // Decorative top header block
-  ctx.fillStyle = theme.headerBg;
-  ctx.fillRect(0, 0, width, 285);
+  // 1. TOP HEADER BLOCK WITH GRADIENT
+  const headerH = 265;
+  const headerGrad = ctx.createLinearGradient(0, 0, 0, headerH);
+  headerGrad.addColorStop(0, colors.gradStart);
+  headerGrad.addColorStop(0.5, colors.gradMid);
+  headerGrad.addColorStop(1, colors.gradEnd);
+  ctx.fillStyle = headerGrad;
+  ctx.fillRect(0, 0, width, headerH);
 
-  // Red-white Pramuka neck-scarf (Kacu) ribbon under header
-  ctx.fillStyle = '#C81E1E';
-  ctx.fillRect(0, 285, width, 16);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(0, 301, width, 10);
-  ctx.fillStyle = theme.subHeaderBg;
-  ctx.fillRect(0, 311, width, 10);
-
-  // Lanyard Slot Hole at very top center
+  // Lanyard Hole Pill at top center
   ctx.fillStyle = '#FAF7F2';
   ctx.beginPath();
-  ctx.roundRect(width / 2 - 70, 26, 140, 24, 12);
+  ctx.roundRect(width / 2 - 58, 28, 116, 20, 10);
   ctx.fill();
 
-  // Header Title
+  // Left White Emblem Box (Tunas Kelapa)
+  const leftBoxX = 44;
+  const boxY = 74;
+  const boxSize = 104;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.roundRect(leftBoxX, boxY, boxSize, boxSize, 26);
+  ctx.fill();
+
+  const tunasImg = await loadImage(
+    `data:image/svg+xml;utf8,${encodeURIComponent(TUNAS_KELAPA_SVG)}`
+  );
+  if (tunasImg) {
+    ctx.drawImage(tunasImg, leftBoxX + 18, boxY + 10, 68, 84);
+  }
+
+  // Right White Emblem Box (WOSM)
+  const rightBoxX = width - 44 - boxSize;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.roundRect(rightBoxX, boxY, boxSize, boxSize, 26);
+  ctx.fill();
+
+  const wosmImg = await loadImage(
+    `data:image/svg+xml;utf8,${encodeURIComponent(WOSM_SVG)}`
+  );
+  if (wosmImg) {
+    ctx.drawImage(wosmImg, rightBoxX + 12, boxY + 12, 80, 80);
+  }
+
+  // Center Header Titles
   ctx.textAlign = 'center';
   ctx.fillStyle = '#F3D299';
-  ctx.font = 'bold 24px sans-serif';
-  ctx.fillText('GERAKAN PRAMUKA KWARTIR RANTING', width / 2, 105);
-  ctx.fillText('KECAMATAN MUARA KAMAN', width / 2, 138);
+  ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('GERAKAN PRAMUKA KWARRAN', width / 2, 108);
+  ctx.font = 'bold 25px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('KECAMATAN MUARA KAMAN', width / 2, 140);
 
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 42px sans-serif';
-  ctx.fillText('PESTA PENGGALANG 2026', width / 2, 198);
+  ctx.font = '800 38px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('PESTA PENGGALANG', width / 2, 190);
 
-  ctx.fillStyle = '#EAE0D5';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('KARTU TANDA IDENTITAS RESMI', width / 2, 245);
-
-  // Photo / Avatar Circle Frame in Center
-  const centerX = width / 2;
-  const centerY = 500;
-  const radius = 135;
-
-  // Outer ring
+  // 2. PITA MERAH PUTIH KACU PRAMUKA (Left 50% Red, Right 50% White)
+  const ribbonY = headerH;
+  const ribbonH = 24;
+  ctx.fillStyle = '#C81E1E';
+  ctx.fillRect(0, ribbonY, width / 2, ribbonH);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(width / 2, ribbonY, width / 2, ribbonH);
+  ctx.strokeStyle = '#D8CEBE';
+  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.arc(centerX, centerY, radius + 12, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fill();
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = theme.accent;
+  ctx.moveTo(0, ribbonY + ribbonH);
+  ctx.lineTo(width, ribbonY + ribbonH);
   ctx.stroke();
 
-  // Inner circle background
+  // 3. 4x6 PORTRAIT PHOTO FRAME WITH ALL CORNERS ROUNDED (Exact 4:6 / 2:3 ratio)
+  const photoW = 240;
+  const photoH = 360; // 240 x 360 = exact 4x6 ratio!
+  const photoX = (width - photoW) / 2;
+  const photoY = 328;
+  const photoRadius = 34;
+
+  // Draw white inner background & clip for photo
   ctx.save();
   ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
   ctx.clip();
 
-  ctx.fillStyle = theme.badgeBg;
-  ctx.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2);
-
   if (card.customPhotoUrl) {
-    try {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      await new Promise<void>((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => resolve();
-        img.src = card.customPhotoUrl!;
-      });
-      if (img.width > 0 && img.height > 0) {
-        const scale = Math.max((radius * 2) / img.width, (radius * 2) / img.height);
-        const w = img.width * scale;
-        const h = img.height * scale;
-        ctx.drawImage(img, centerX - w / 2, centerY - h / 2, w, h);
-      }
-    } catch {
-      // Fallback to initials
+    const userImg = await loadImage(card.customPhotoUrl);
+    if (userImg && userImg.width > 0 && userImg.height > 0) {
+      const scale = Math.max(photoW / userImg.width, photoH / userImg.height);
+      const drawW = userImg.width * scale;
+      const drawH = userImg.height * scale;
+      ctx.drawImage(
+        userImg,
+        photoX + (photoW - drawW) / 2,
+        photoY + (photoH - drawH) / 2,
+        drawW,
+        drawH
+      );
     }
   } else {
-    // Draw clean Scout Initials & Tunas Silhouette
+    // Same placeholder as preview: Initials + PRAMUKA + Foto 4x6
     const initials = card.nama
       .split(' ')
       .filter(Boolean)
       .slice(0, 2)
-      .map((s) => s[0]?.toUpperCase())
+      .map((part) => part[0]?.toUpperCase())
       .join('');
-    ctx.fillStyle = theme.badgeText;
-    ctx.font = 'bold 92px sans-serif';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(initials || 'GP', centerX, centerY);
+    ctx.fillStyle = '#4A2C11';
+    ctx.font = '800 76px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(initials || 'GP', width / 2, photoY + 175);
+
+    ctx.fillStyle = '#7A5C3E';
+    ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('PRAMUKA', width / 2, photoY + 225);
+
+    ctx.fillStyle = '#A38B73';
+    ctx.font = '600 20px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('FOTO 4x6', width / 2, photoY + 265);
   }
   ctx.restore();
-  ctx.textBaseline = 'alphabetic';
 
-  // Category Pill Banner
-  ctx.fillStyle = theme.roleBar;
+  // Rounded border around 4x6 frame
   ctx.beginPath();
-  ctx.roundRect(width / 2 - 230, 665, 460, 64, 32);
+  ctx.roundRect(photoX, photoY, photoW, photoH, photoRadius);
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = colors.frameBorder;
+  ctx.stroke();
+
+  // 4. ROLE / CATEGORY PILL
+  const pillY = 716;
+  const pillW = 360;
+  const pillH = 56;
+  ctx.fillStyle = colors.roleBadge;
+  ctx.beginPath();
+  ctx.roundRect((width - pillW) / 2, pillY, pillW, pillH, 28);
   ctx.fill();
 
-  ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 28px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(card.kategori, width / 2, 707);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.kategori, width / 2, pillY + 37);
 
-  // Person Name
+  // 5. FULL NAME & JABATAN
   ctx.fillStyle = '#23170D';
-  ctx.font = 'bold 42px sans-serif';
-  const maxNameWidth = 780;
-  let displayName = card.nama;
-  if (ctx.measureText(displayName).width > maxNameWidth) {
-    ctx.font = 'bold 34px sans-serif';
+  ctx.font = '800 40px "Plus Jakarta Sans", sans-serif';
+  if (ctx.measureText(card.nama).width > 780) {
+    ctx.font = '800 32px "Plus Jakarta Sans", sans-serif';
   }
-  ctx.fillText(displayName, width / 2, 795);
+  ctx.fillText(card.nama, width / 2, 828);
 
-  // Jabatan / Peran
-  ctx.fillStyle = theme.accent;
-  ctx.font = 'bold 26px sans-serif';
-  ctx.fillText(card.jabatan, width / 2, 840);
+  ctx.fillStyle = '#7A5C3E';
+  ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.jabatan, width / 2, 872);
 
-  // Info Box (Pangkalan Sekolah, NIP/Regu, Kepala Sekolah)
-  const boxX = 75;
-  const boxY = 880;
-  const boxW = width - 150;
-  const boxH = 270;
+  // 6. DETAILS TABLE CARD (White rounded-2xl card)
+  const tableX = 56;
+  const tableY = 910;
+  const tableW = width - 112;
+  const tableH = 315;
 
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
-  ctx.roundRect(boxX, boxY, boxW, boxH, 24);
+  ctx.roundRect(tableX, tableY, tableW, tableH, 36);
   ctx.fill();
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#E5DEC9';
   ctx.stroke();
 
-  ctx.textAlign = 'left';
-  const labelX = boxX + 35;
-  const valX = boxX + 265;
+  const leftPad = tableX + 36;
+  const rightPad = tableX + tableW - 36;
 
   // Row 1: Pangkalan
+  ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('Pangkalan', labelX, boxY + 58);
-  ctx.fillStyle = '#23170D';
-  ctx.font = 'bold 24px sans-serif';
-  ctx.fillText(`:  ${card.namaSekolah}`, valX, boxY + 58);
+  ctx.font = '600 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Pangkalan', leftPad, tableY + 72);
 
-  // Divider 1
-  ctx.strokeStyle = '#EFE8DC';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#23170D';
+  ctx.font = 'bold 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.namaSekolah, rightPad, tableY + 72);
+
+  ctx.strokeStyle = '#F3ECE0';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(labelX, boxY + 88);
-  ctx.lineTo(boxX + boxW - 35, boxY + 88);
+  ctx.moveTo(leftPad, tableY + 105);
+  ctx.lineTo(rightPad, tableY + 105);
   ctx.stroke();
 
   // Row 2: NIP / Regu
+  ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.fillText(card.nipAtauReguLabel, labelX, boxY + 142);
-  ctx.fillStyle = '#23170D';
-  ctx.font = 'bold 24px monospace';
-  ctx.fillText(`:  ${card.nipAtauReguValue}`, valX, boxY + 142);
+  ctx.font = '600 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(card.nipAtauReguLabel, leftPad, tableY + 172);
 
-  // Divider 2
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#23170D';
+  ctx.font = 'bold 26px "JetBrains Mono", monospace';
+  ctx.fillText(card.nipAtauReguValue, rightPad, tableY + 172);
+
   ctx.beginPath();
-  ctx.moveTo(labelX, boxY + 172);
-  ctx.lineTo(boxX + boxW - 35, boxY + 172);
+  ctx.moveTo(leftPad, tableY + 205);
+  ctx.lineTo(rightPad, tableY + 205);
   ctx.stroke();
 
   // Row 3: ID Kartu
+  ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.fillText('No. ID Kartu', labelX, boxY + 225);
-  ctx.fillStyle = '#4A2C11';
-  ctx.font = 'bold 24px monospace';
-  ctx.fillText(`:  ${card.nomorKartu}`, valX, boxY + 225);
+  ctx.font = '600 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('ID Kartu', leftPad, tableY + 270);
 
-  // Bottom Footer Band
-  ctx.fillStyle = theme.headerBg;
-  ctx.fillRect(0, height - 95, width, 95);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = 'bold 26px "JetBrains Mono", monospace';
+  ctx.fillText(card.nomorKartu, rightPad, tableY + 270);
+
+  // 7. BOTTOM FOOTER BAND
+  const footerH = 86;
+  const footerY = height - footerH;
+  const footerGrad = ctx.createLinearGradient(0, footerY, width, footerY);
+  footerGrad.addColorStop(0, colors.gradStart);
+  footerGrad.addColorStop(0.5, colors.gradMid);
+  footerGrad.addColorStop(1, colors.gradEnd);
+  ctx.fillStyle = footerGrad;
+  ctx.fillRect(0, footerY, width, footerH);
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#F3D299';
-  ctx.font = 'bold 22px sans-serif';
+  ctx.font = 'bold 23px "Plus Jakarta Sans", sans-serif';
   ctx.fillText(
-    'PANITIA PELAKSANA PESTA PENGGALANG KECAMATAN MUARA KAMAN',
+    'PANITIA PESTA PENGGALANG KEC. MUARA KAMAN',
     width / 2,
-    height - 40
+    footerY + 52
   );
 
-  // Outer Frame Border
-  ctx.strokeStyle = '#4A2C11';
-  ctx.lineWidth = 10;
-  ctx.strokeRect(5, 5, width - 10, height - 10);
+  ctx.restore();
 
+  // Outer Rounded Card Border (#4A2C11)
+  ctx.beginPath();
+  ctx.roundRect(4, 4, width - 8, height - 8, 56);
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = '#4A2C11';
+  ctx.stroke();
+
+  return canvas;
+}
+
+/**
+ * Downloads a single Portrait ID Card as PNG (matching the preview 100%)
+ */
+export async function downloadIdCardAsPng(card: IdCardPerson): Promise<void> {
+  const canvas = await renderIdCardToCanvas(card);
   const dataUrl = canvas.toDataURL('image/png');
   const link = document.createElement('a');
   const safeName = card.nama.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -630,262 +741,194 @@ export async function downloadIdCardAsPng(card: IdCardPerson): Promise<void> {
 }
 
 /**
- * Generates and downloads a standalone, print-ready HTML document for all 20 Portrait ID Cards
- * of a school so the user can open and print to PDF/paper anywhere.
+ * Downloads a single Portrait ID Card directly as a PDF (.pdf)
  */
-export function downloadPrintableCardsHtml(
-  reg: SubmittedRegistration,
-  cards: IdCardPerson[]
-): void {
-  const cardItemsHtml = cards
-    .map((card) => {
-      const isPembina =
-        card.kategori === 'PEMBINA PUTRA' || card.kategori === 'PEMBINA PUTRI';
-      const headerColor = isPembina
-        ? '#4A2C11'
-        : card.kategori === 'PESERTA PUTRA'
-        ? '#8B1E1E'
-        : '#4B1E78';
-      const badgeColor = isPembina
-        ? '#B45309'
-        : card.kategori === 'PESERTA PUTRA'
-        ? '#C81E1E'
-        : '#6B21A8';
-
-      const initials = card.nama
-        .split(' ')
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((s) => s[0]?.toUpperCase())
-        .join('');
-
-      return `
-      <div class="id-card">
-        <div class="card-header" style="background:${headerColor}">
-          <div class="lanyard-hole"></div>
-          <div class="sub-org">GERAKAN PRAMUKA KWARRAN MUARA KAMAN</div>
-          <div class="event-title">PESTA PENGGALANG</div>
-          <div class="card-subtitle">KARTU TANDA IDENTITAS RESMI</div>
-        </div>
-        <div class="kacu-strip"></div>
-        <div class="card-body">
-          <div class="avatar-ring" style="border-color:${badgeColor}">
-            ${
-              card.customPhotoUrl
-                ? `<img src="${card.customPhotoUrl}" alt="${card.nama}" />`
-                : `<span>${initials || 'GP'}</span>`
-            }
-          </div>
-          <div class="role-badge" style="background:${badgeColor}">${card.kategori}</div>
-          <div class="person-name">${card.nama}</div>
-          <div class="person-jabatan" style="color:${headerColor}">${card.jabatan}</div>
-          <table class="info-table">
-            <tr>
-              <td class="lbl">Pangkalan</td>
-              <td class="val">: ${card.namaSekolah}</td>
-            </tr>
-            <tr>
-              <td class="lbl">${card.nipAtauReguLabel}</td>
-              <td class="val">: ${card.nipAtauReguValue}</td>
-            </tr>
-            <tr>
-              <td class="lbl">ID Kartu</td>
-              <td class="val mono">: ${card.nomorKartu}</td>
-            </tr>
-          </table>
-        </div>
-        <div class="card-footer" style="background:${headerColor}">
-          PANITIA PESTA PENGGALANG KEC. MUARA KAMAN
-        </div>
-      </div>`;
-    })
-    .join('\n');
-
-  const html = `<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <title>Kartu Peserta & Pembina — ${reg.namaSekolah}</title>
-  <style>
-    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #FAF7F2; margin: 0; padding: 20px; color: #23170D; }
-    .toolbar { background: #4A2C11; color: #fff; padding: 14px 24px; border-radius: 12px; max-width: 900px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: space-between; }
-    .toolbar button { background: #C81E1E; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
-    .grid { display: grid; grid-template-columns: repeat(2, 86mm); gap: 10mm; justify-content: center; margin: 0 auto; }
-    .id-card { width: 86mm; height: 126mm; background: #FAF7F2; border: 2px solid #4A2C11; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid; break-inside: avoid; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .card-header { color: #fff; text-align: center; padding: 10px 10px 12px; position: relative; }
-    .lanyard-hole { width: 32px; height: 6px; background: #FAF7F2; border-radius: 4px; margin: 0 auto 6px; }
-    .sub-org { font-size: 8.5px; color: #F3D299; font-weight: 700; letter-spacing: 0.4px; }
-    .event-title { font-size: 15px; font-weight: 800; margin: 2px 0; }
-    .card-subtitle { font-size: 8px; color: #EAE0D5; font-weight: 600; }
-    .kacu-strip { height: 6px; background: linear-gradient(90deg, #C81E1E 0%, #C81E1E 50%, #FFFFFF 50%, #FFFFFF 100%); border-bottom: 1px solid #D8CEBE; }
-    .card-body { padding: 10px 14px; text-align: center; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    .avatar-ring { width: 68px; height: 68px; border-radius: 50%; border: 3px solid #4A2C11; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; font-weight: 800; font-size: 24px; color: #4A2C11; margin-bottom: 8px; }
-    .avatar-ring img { width: 100%; height: 100%; object-fit: cover; }
-    .role-badge { color: #fff; font-size: 9px; font-weight: 800; padding: 4px 14px; border-radius: 99px; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .person-name { font-size: 14px; font-weight: 800; color: #23170D; line-height: 1.25; margin-bottom: 2px; }
-    .person-jabatan { font-size: 10px; font-weight: 700; margin-bottom: 8px; }
-    .info-table { width: 100%; background: #fff; border: 1px solid #E5DEC9; border-radius: 8px; padding: 6px 8px; font-size: 9.5px; text-align: left; border-collapse: collapse; }
-    .info-table td { padding: 3px 4px; border-bottom: 1px solid #F3ECE0; }
-    .info-table tr:last-child td { border-bottom: none; }
-    .info-table .lbl { color: #6B5744; font-weight: 600; width: 34%; }
-    .info-table .val { color: #23170D; font-weight: 700; }
-    .info-table .mono { font-family: monospace; }
-    .card-footer { color: #F3D299; text-align: center; font-size: 8px; font-weight: 700; padding: 7px 6px; letter-spacing: 0.4px; }
-    @media print {
-      body { background: #fff; padding: 0; }
-      .toolbar { display: none !important; }
-      .grid { gap: 6mm; }
-    }
-  </style>
-</head>
-<body>
-  <div class="toolbar">
-    <div>
-      <strong>Lembar Siap Cetak Kartu Peserta & Pembina (${cards.length} Kartu Portrait)</strong><br/>
-      <span style="font-size:12px;color:#F3D299">${reg.namaSekolah} — No. Registrasi: ${reg.nomorRegistrasi}</span>
-    </div>
-    <button onclick="window.print()">Cetak Sekarang / Simpan PDF</button>
-  </div>
-  <div class="grid">
-    ${cardItemsHtml}
-  </div>
-  <script>
-    window.onload = function() { setTimeout(function() { window.print(); }, 400); };
-  </script>
-</body>
-</html>`;
-
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  const safeSchool = reg.namaSekolah.replace(/[^a-zA-Z0-9_-]/g, '_');
-  link.href = url;
-  link.download = `Lembar_Cetak_Kartu_Peserta_${safeSchool}.html`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+export async function downloadSingleIdCardAsPdf(card: IdCardPerson): Promise<void> {
+  const canvas = await renderIdCardToCanvas(card);
+  const imgData = canvas.toDataURL('image/jpeg', 0.95);
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: [86, 132],
+  });
+  pdf.addImage(imgData, 'JPEG', 0, 0, 86, 132);
+  const safeName = card.nama.replace(/[^a-zA-Z0-9_-]/g, '_');
+  pdf.save(`Kartu_${card.kategori.replace(/\s+/g, '_')}_${safeName}.pdf`);
 }
 
 /**
- * Generates and downloads a standalone, print-ready HTML document for the Admin Recap
- * (Rekapitulasi Pendaftaran Pesta Penggalang) so it works 100% reliably even in sandboxed iframes.
+ * Renders all selected Portrait ID Cards using the exact preview renderer and packs them
+ * into a multi-page A4 Portrait PDF (.pdf) file (4 cards per page, 2x2 grid) and downloads it immediately.
  */
-export function downloadPrintableAdminRecapHtml(
+export async function downloadAllCardsAsPdf(
+  reg: SubmittedRegistration,
+  cards: IdCardPerson[]
+): Promise<void> {
+  if (cards.length === 0) return;
+
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4', // 210mm x 297mm
+  });
+
+  const cardWidthMm = 86;
+  const cardHeightMm = 132;
+  const marginX = 14;
+  const marginY = 12;
+  const gapX = 10;
+  const gapY = 9;
+
+  for (let i = 0; i < cards.length; i++) {
+    const slotIndex = i % 4;
+    if (i > 0 && slotIndex === 0) {
+      pdf.addPage('a4', 'portrait');
+    }
+
+    const col = slotIndex % 2;
+    const row = Math.floor(slotIndex / 2);
+    const x = marginX + col * (cardWidthMm + gapX);
+    const y = marginY + row * (cardHeightMm + gapY);
+
+    const canvas = await renderIdCardToCanvas(cards[i]);
+    const imgData = canvas.toDataURL('image/jpeg', 0.94);
+    pdf.addImage(imgData, 'JPEG', x, y, cardWidthMm, cardHeightMm);
+  }
+
+  const safeSchool = reg.namaSekolah.replace(/[^a-zA-Z0-9_-]/g, '_');
+  pdf.save(`Kartu_Peserta_dan_Pembina_${safeSchool}.pdf`);
+}
+
+/**
+ * Downloads the Admin Recap (Rekapitulasi Pendaftaran Pesta Penggalang) directly as a PDF (.pdf)
+ */
+export function downloadAdminRecapAsPdf(
   submissions: SubmittedRegistration[]
 ): void {
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4', // 297mm x 210mm
+  });
+
   const totalRegu = submissions.reduce((acc, s) => acc + (s.jumlahRegu || 2), 0);
   const totalDana = submissions.reduce((acc, s) => acc + (s.totalBiaya || 0), 0);
 
-  const rowsHtml = submissions
-    .map(
-      (s, idx) => `
-      <tr>
-        <td style="text-align:center">${idx + 1}</td>
-        <td><strong>${s.nomorRegistrasi}</strong><br/><small>${s.tanggalDaftar}</small></td>
-        <td><strong>${s.namaSekolah}</strong><br/><small>Kepsek: ${s.namaKepalaSekolah} (NIP: ${
-        s.nipKepalaSekolah
-      })</small></td>
-        <td>
-          <strong>Putra:</strong><br/>
-          1. ${s.namaPembinaPutra} (${s.nipPembinaPutra})<br/>
-          2. ${s.namaPembinaPutra2 || '-'} (${s.nipPembinaPutra2 || '-'})<br/>
-          <strong>Putri:</strong><br/>
-          1. ${s.namaPembinaPutri} (${s.nipPembinaPutri})<br/>
-          2. ${s.namaPembinaPutri2 || '-'} (${s.nipPembinaPutri2 || '-'})
-        </td>
-        <td>
-          ${s.pesertaPutra.map((p, i) => `${i + 1}. ${p || '-'}`).join('<br/>')}
-        </td>
-        <td>
-          ${s.pesertaPutri.map((p, i) => `${i + 1}. ${p || '-'}`).join('<br/>')}
-        </td>
-        <td style="text-align:right">
-          <strong>${formatRupiah(s.totalBiaya)}</strong><br/>
-          <small>${s.jumlahRegu} Regu · ${s.statusVerifikasi || 'Menunggu Verifikasi'}</small>
-        </td>
-      </tr>`
-    )
-    .join('\n');
+  // Header
+  pdf.setFillColor(74, 44, 17); // #4A2C11
+  pdf.rect(10, 10, 277, 26, 'F');
 
-  const html = `<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8" />
-  <title>Rekapitulasi Pendaftaran Pesta Penggalang — Kwarran Kecamatan Muara Kaman</title>
-  <style>
-    * { box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-    body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #23170D; background: #fff; }
-    .toolbar { background: #4A2C11; color: #fff; padding: 14px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
-    .toolbar button { background: #15803D; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
-    .header { text-align: center; border-bottom: 3px solid #4A2C11; padding-bottom: 14px; margin-bottom: 18px; }
-    .header h1 { margin: 4px 0; font-size: 20px; color: #4A2C11; }
-    .header p { margin: 2px 0; font-size: 12px; color: #5C4328; }
-    .summary { display: flex; gap: 16px; margin-bottom: 18px; font-size: 13px; background: #FAF7F2; padding: 12px 16px; border: 1px solid #D8CEBE; border-radius: 8px; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
-    th, td { border: 1px solid #B8A68E; padding: 7px 8px; vertical-align: top; text-align: left; }
-    th { background: #4A2C11; color: #fff; font-weight: bold; }
-    tr:nth-child(even) { background: #FAF7F2; }
-    @media print {
-      .toolbar { display: none !important; }
-      @page { size: landscape; margin: 10mm; }
+  pdf.setTextColor(243, 210, 153);
+  pdf.setFont('helvetica', 'bold');
+  pdf.setFontSize(10);
+  pdf.text(
+    'GERAKAN PRAMUKA KWARTIR RANTING KECAMATAN MUARA KAMAN',
+    148.5,
+    18,
+    { align: 'center' }
+  );
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(15);
+  pdf.text(
+    'REKAPITULASI PENDAFTARAN SEKOLAH PESTA PENGGALANG',
+    148.5,
+    26,
+    { align: 'center' }
+  );
+
+  pdf.setFontSize(9);
+  pdf.text(
+    `Total Sekolah: ${submissions.length}  |  Total Regu: ${totalRegu} (${
+      submissions.length * 16
+    } Peserta)  |  Total Biaya: ${formatRupiah(totalDana)}`,
+    148.5,
+    33,
+    { align: 'center' }
+  );
+
+  let y = 44;
+
+  const drawTableHeader = (topY: number) => {
+    pdf.setFillColor(239, 232, 220);
+    pdf.rect(10, topY, 277, 9, 'F');
+    pdf.setTextColor(35, 23, 13);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.text('No', 13, topY + 6);
+    pdf.text('Sekolah & Kepsek', 22, topY + 6);
+    pdf.text('Pembina Putra & Putri', 82, topY + 6);
+    pdf.text('Peserta Putra (8 Orang)', 145, topY + 6);
+    pdf.text('Peserta Putri (8 Orang)', 202, topY + 6);
+    pdf.text('Biaya & Status', 255, topY + 6);
+  };
+
+  drawTableHeader(y);
+  y += 11;
+
+  submissions.forEach((s, idx) => {
+    const rowHeight = 36;
+    if (y + rowHeight > 196) {
+      pdf.addPage('a4', 'landscape');
+      y = 15;
+      drawTableHeader(y);
+      y += 11;
     }
-  </style>
-</head>
-<body>
-  <div class="toolbar">
-    <div>
-      <strong>Dokumen Rekapitulasi Pendaftaran Pesta Penggalang Kecamatan Muara Kaman</strong><br/>
-      <span style="font-size:12px;color:#F3D299">Buka file ini lalu tekan tombol Cetak Sekarang atau Ctrl+P untuk mencetak / menyimpan PDF</span>
-    </div>
-    <button onclick="window.print()">Cetak Sekarang / Simpan PDF</button>
-  </div>
-  <div class="header">
-    <p><strong>GERAKAN PRAMUKA KWARTIR RANTING KECAMATAN MUARA KAMAN</strong></p>
-    <h1>REKAPITULASI PENDAFTARAN SEKOLAH PESTA PENGGALANG</h1>
-    <p>Rekening Resmi: Bank Kaltimtara 0042830798 a.n. Susilawati · Konfirmasi WA: 081253445433</p>
-  </div>
-  <div class="summary">
-    <div><strong>Total Sekolah:</strong> ${submissions.length} Sekolah</div>
-    <div><strong>Total Regu:</strong> ${totalRegu} Regu (${submissions.length * 16} Peserta)</div>
-    <div><strong>Total Pembina:</strong> ${submissions.length * 4} Orang</div>
-    <div><strong>Total Biaya Pendaftaran:</strong> ${formatRupiah(totalDana)}</div>
-  </div>
-  <table>
-    <thead>
-      <tr>
-        <th style="width:32px">No</th>
-        <th style="width:120px">No. Registrasi</th>
-        <th style="width:170px">Sekolah & Kepala Sekolah</th>
-        <th style="width:200px">Pembina Pendamping (Putra & Putri)</th>
-        <th>Peserta Putra (8 Orang)</th>
-        <th>Peserta Putri (8 Orang)</th>
-        <th style="width:120px">Total Biaya</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${
-        rowsHtml ||
-        '<tr><td colspan="7" style="text-align:center;padding:20px">Belum ada data pendaftaran.</td></tr>'
-      }
-    </tbody>
-  </table>
-  <script>
-    window.onload = function() { setTimeout(function() { window.print(); }, 400); };
-  </script>
-</body>
-</html>`;
 
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `Cetak_Rekap_Pesta_Penggalang_Muara_Kaman_${new Date()
-    .toISOString()
-    .slice(0, 10)}.html`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+    pdf.setDrawColor(216, 206, 190);
+    pdf.rect(10, y - 2, 277, rowHeight);
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8);
+    pdf.setTextColor(35, 23, 13);
+    pdf.text(String(idx + 1), 13, y + 4);
+
+    // Col 1: Sekolah & Kepsek
+    pdf.text(s.namaSekolah.slice(0, 32), 22, y + 4);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.5);
+    pdf.text(`No: ${s.nomorRegistrasi}`, 22, y + 9);
+    pdf.text(`Kepsek: ${s.namaKepalaSekolah.slice(0, 28)}`, 22, y + 14);
+    pdf.text(`NIP: ${s.nipKepalaSekolah}`, 22, y + 19);
+    pdf.text(`Tgl: ${s.tanggalDaftar}`, 22, y + 24);
+
+    // Col 2: Pembina
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Putra:', 82, y + 4);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`1. ${s.namaPembinaPutra.slice(0, 26)}`, 82, y + 8.5);
+    pdf.text(`2. ${(s.namaPembinaPutra2 || '-').slice(0, 26)}`, 82, y + 13);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Putri:', 82, y + 18.5);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`1. ${s.namaPembinaPutri.slice(0, 26)}`, 82, y + 23);
+    pdf.text(`2. ${(s.namaPembinaPutri2 || '-').slice(0, 26)}`, 82, y + 27.5);
+
+    // Col 3: Peserta Putra (8)
+    s.pesertaPutra.forEach((p, i) => {
+      pdf.text(`${i + 1}. ${(p || '-').slice(0, 26)}`, 145, y + 3.5 + i * 3.8);
+    });
+
+    // Col 4: Peserta Putri (8)
+    s.pesertaPutri.forEach((p, i) => {
+      pdf.text(`${i + 1}. ${(p || '-').slice(0, 26)}`, 202, y + 3.5 + i * 3.8);
+    });
+
+    // Col 5: Biaya & Status
+    pdf.setFont('helvetica', 'bold');
+    pdf.setTextColor(200, 30, 30);
+    pdf.text(formatRupiah(s.totalBiaya), 255, y + 5);
+    pdf.setTextColor(35, 23, 13);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(`${s.jumlahRegu} Regu`, 255, y + 10);
+    pdf.text(s.statusVerifikasi || 'Menunggu Verifikasi', 255, y + 15);
+
+    y += rowHeight;
+  });
+
+  pdf.save(
+    `Rekap_Pendaftaran_Pesta_Penggalang_Muara_Kaman_${new Date()
+      .toISOString()
+      .slice(0, 10)}.pdf`
+  );
 }

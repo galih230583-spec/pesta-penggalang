@@ -21,7 +21,7 @@ import {
   buildWhatsAppMessage,
 } from '../types/registration';
 import {
-  downloadReceiptAsPng,
+  downloadReceiptAsPdf,
   downloadPaymentProofFile,
 } from '../utils/downloadHelpers';
 import { TunasKelapaLogo, WosmLogo } from './PramukaEmblems';
@@ -74,7 +74,7 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
   const handleDownloadReceipt = async () => {
     setDownloadingReceipt(true);
     try {
-      await downloadReceiptAsPng(registration);
+      await downloadReceiptAsPdf(registration);
     } finally {
       setTimeout(() => setDownloadingReceipt(false), 1200);
     }
@@ -504,12 +504,12 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
                 {downloadingReceipt ? (
                   <>
                     <Check className="w-5 h-5" />
-                    <span>Bukti Pendaftaran Diunduh!</span>
+                    <span>File PDF Bukti Diunduh!</span>
                   </>
                 ) : (
                   <>
                     <Download className="w-5 h-5" />
-                    <span>Simpan / Cetak Bukti (PNG)</span>
+                    <span>Simpan / Cetak Bukti (.PDF)</span>
                   </>
                 )}
               </button>

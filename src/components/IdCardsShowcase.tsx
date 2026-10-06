@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import {
   Download,
-  Printer,
+  FileDown,
   Camera,
   Check,
   IdCard,
+  Loader2,
 } from 'lucide-react';
 import { SubmittedRegistration } from '../types/registration';
 import {
   IdCardPerson,
   buildIdCardsFromRegistration,
   downloadIdCardAsPng,
-  downloadPrintableCardsHtml,
+  downloadSingleIdCardAsPdf,
+  downloadAllCardsAsPdf,
 } from '../utils/downloadHelpers';
 import { TunasKelapaLogo, WosmLogo } from './PramukaEmblems';
 
@@ -25,7 +27,8 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
     'ALL' | 'PEMBINA' | 'PUTRA' | 'PUTRI'
   >('ALL');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-  const [printedNotice, setPrintedNotice] = useState(false);
+  const [downloadingAllPdf, setDownloadingAllPdf] = useState(false);
+  const [pdfSuccessNotice, setPdfSuccessNotice] = useState(false);
 
   const allCards = buildIdCardsFromRegistration(registration).map((card) => ({
     ...card,
@@ -55,8 +58,17 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
     reader.readAsDataURL(file);
   };
 
-  const handleDownloadSingleCard = async (card: IdCardPerson) => {
-    setDownloadingId(card.id);
+  const handleDownloadSinglePdf = async (card: IdCardPerson) => {
+    setDownloadingId(`${card.id}-pdf`);
+    try {
+      await downloadSingleIdCardAsPdf(card);
+    } finally {
+      setTimeout(() => setDownloadingId(null), 900);
+    }
+  };
+
+  const handleDownloadSinglePng = async (card: IdCardPerson) => {
+    setDownloadingId(`${card.id}-png`);
     try {
       await downloadIdCardAsPng(card);
     } finally {
@@ -64,20 +76,21 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
     }
   };
 
-  const handlePrintAllCards = () => {
-    downloadPrintableCardsHtml(registration, filteredCards);
-    setPrintedNotice(true);
-    setTimeout(() => setPrintedNotice(false), 3500);
+  const handleDownloadAllPdf = async () => {
+    if (downloadingAllPdf) return;
+    setDownloadingAllPdf(true);
     try {
-      window.print();
-    } catch {
-      // Ignore if blocked in iframe
+      await downloadAllCardsAsPdf(registration, filteredCards);
+      setPdfSuccessNotice(true);
+      setTimeout(() => setPdfSuccessNotice(false), 3500);
+    } finally {
+      setDownloadingAllPdf(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header & Tombol Cetak / Simpan Semua Kartu */}
+      {/* Header & Tombol Unduh Semua Kartu Langsung File PDF (.pdf) */}
       <div className="bg-white rounded-3xl border border-[#E5DEC9] p-5 sm:p-6 space-y-5 no-print">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
@@ -90,26 +103,32 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
               </h3>
               <p className="text-xs sm:text-sm text-[#6B5744] mt-0.5">
                 Otomatis dibuat dari data pendaftaran <strong>{registration.namaSekolah}</strong>.
-                Anda dapat mengunggah pasfoto (opsional) dan mengunduh kartu beresolusi tinggi
-                (PNG) atau lembar siap cetak.
+                Dilengkapi bingkai pasfoto <strong>4x6 sudut melengkung</strong> dan hasil unduhan{' '}
+                <strong>PDF (.pdf)</strong> yang sama persis dengan pratinjau.
               </p>
             </div>
           </div>
 
           <button
             type="button"
-            onClick={handlePrintAllCards}
-            className="min-h-[52px] px-5 py-3 rounded-2xl bg-[#C81E1E] hover:bg-[#A51717] text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.99] transition-all cursor-pointer shrink-0"
+            onClick={handleDownloadAllPdf}
+            disabled={downloadingAllPdf}
+            className="min-h-[52px] px-5 py-3 rounded-2xl bg-[#C81E1E] hover:bg-[#A51717] disabled:opacity-70 text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-sm active:scale-[0.99] transition-all cursor-pointer shrink-0"
           >
-            {printedNotice ? (
+            {downloadingAllPdf ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Menyiapkan File PDF ({filteredCards.length} Kartu)...</span>
+              </>
+            ) : pdfSuccessNotice ? (
               <>
                 <Check className="w-5 h-5" />
-                <span>Lembar Cetak Kartu Diunduh!</span>
+                <span>File PDF Berhasil Diunduh!</span>
               </>
             ) : (
               <>
-                <Printer className="w-5 h-5" />
-                <span>Cetak / Unduh Semua Kartu ({filteredCards.length})</span>
+                <FileDown className="w-5 h-5" />
+                <span>Unduh Semua Kartu ({filteredCards.length}) — File PDF (.pdf)</span>
               </>
             )}
           </button>
@@ -183,7 +202,7 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
             ? 'bg-[#C81E1E] text-white'
             : 'bg-[#6B21A8] text-white';
 
-          const ringBorderColor = isPembina
+          const frameBorderColor = isPembina
             ? 'border-[#D97706]'
             : isPutra
             ? 'border-[#C81E1E]'
@@ -197,19 +216,16 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
             .join('');
 
           return (
-            <div
-              key={card.id}
-              className="flex flex-col items-center space-y-3"
-            >
-              {/* PORTRAIT ID CARD CONTAINER */}
-              <div className="w-full max-w-[330px] aspect-[3/4.4] rounded-3xl bg-[#FAF7F2] border-[3px] border-[#4A2C11] shadow-md overflow-hidden flex flex-col justify-between relative">
+            <div key={card.id} className="flex flex-col items-center space-y-3">
+              {/* PORTRAIT ID CARD CONTAINER (Matches renderIdCardToCanvas 1:1) */}
+              <div className="w-full max-w-[330px] aspect-[900/1380] rounded-3xl bg-[#FAF7F2] border-[3px] border-[#4A2C11] shadow-md overflow-hidden flex flex-col justify-between relative">
                 {/* TOP HEADER BLOCK */}
                 <div>
                   <div
                     className={`bg-gradient-to-b ${headerGradient} px-4 pt-3 pb-4 text-white text-center relative`}
                   >
                     {/* Lanyard Hole Visual */}
-                    <div className="w-12 h-2 rounded-full bg-[#FAF7F2] mx-auto mb-2.5 shadow-inner" />
+                    <div className="w-11 h-2 rounded-full bg-[#FAF7F2] mx-auto mb-2.5 shadow-inner" />
 
                     <div className="flex items-center justify-between gap-2">
                       <div className="w-9 h-9 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 shadow-xs">
@@ -241,12 +257,12 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
                   </div>
                 </div>
 
-                {/* CENTER PHOTO / AVATAR & IDENTITY */}
-                <div className="px-5 py-3 flex-1 flex flex-col items-center justify-center text-center">
-                  {/* Circular Photo Frame with Optional Upload */}
+                {/* CENTER 4x6 ROUNDED PHOTO FRAME & IDENTITY */}
+                <div className="px-5 py-2.5 flex-1 flex flex-col items-center justify-center text-center">
+                  {/* 4x6 Portrait Photo Frame with All Corners Rounded (w-[88px] h-[132px] = exact 4:6 ratio) */}
                   <div className="relative group mb-2.5">
                     <div
-                      className={`w-24 h-24 rounded-full border-4 ${ringBorderColor} bg-white shadow-sm overflow-hidden flex items-center justify-center`}
+                      className={`w-[88px] h-[132px] rounded-2xl border-4 ${frameBorderColor} bg-white shadow-sm overflow-hidden flex items-center justify-center`}
                     >
                       {card.customPhotoUrl ? (
                         <img
@@ -255,12 +271,15 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="flex flex-col items-center justify-center text-[#4A2C11]">
+                        <div className="flex flex-col items-center justify-center text-[#4A2C11] px-1">
                           <span className="text-2xl font-extrabold tracking-tight">
                             {initials || 'GP'}
                           </span>
-                          <span className="text-[9px] font-semibold text-[#7A5C3E]">
+                          <span className="text-[8.5px] font-bold text-[#7A5C3E] mt-0.5">
                             PRAMUKA
+                          </span>
+                          <span className="text-[7.5px] font-semibold text-[#A38B73] mt-0.5">
+                            FOTO 4x6
                           </span>
                         </div>
                       )}
@@ -269,8 +288,8 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
                     {/* Upload Photo Trigger on Card */}
                     <label
                       htmlFor={`photo-upload-${card.id}`}
-                      title="Ganti Pasfoto Kartu"
-                      className="no-print absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[#4A2C11] hover:bg-[#C81E1E] text-white flex items-center justify-center shadow-md cursor-pointer transition-colors"
+                      title="Unggah Pasfoto 4x6"
+                      className="no-print absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl bg-[#4A2C11] hover:bg-[#C81E1E] text-white flex items-center justify-center shadow-md cursor-pointer transition-colors"
                     >
                       <Camera className="w-4 h-4" />
                       <input
@@ -285,23 +304,23 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
 
                   {/* Role / Category Ribbon */}
                   <div
-                    className={`px-3.5 py-1 rounded-full text-[10px] font-extrabold tracking-wider ${roleBadgeBg} shadow-2xs`}
+                    className={`px-3.5 py-0.5 rounded-full text-[9.5px] font-extrabold tracking-wider ${roleBadgeBg} shadow-2xs`}
                   >
                     {card.kategori}
                   </div>
 
                   {/* Full Name */}
-                  <h5 className="mt-2 text-base font-extrabold text-[#23170D] leading-snug line-clamp-2">
+                  <h5 className="mt-1.5 text-sm font-extrabold text-[#23170D] leading-snug line-clamp-1">
                     {card.nama}
                   </h5>
 
                   {/* Jabatan / Peran */}
-                  <p className="text-xs font-bold text-[#7A5C3E] mt-0.5">
+                  <p className="text-[11px] font-bold text-[#7A5C3E]">
                     {card.jabatan}
                   </p>
 
                   {/* Details Table Card */}
-                  <div className="mt-3 w-full bg-white rounded-2xl border border-[#E5DEC9] p-2.5 text-left text-[11px] space-y-1 shadow-2xs">
+                  <div className="mt-2 w-full bg-white rounded-2xl border border-[#E5DEC9] p-2.5 text-left text-[10.5px] space-y-1 shadow-2xs">
                     <div className="flex items-start justify-between gap-2 border-b border-[#F3ECE0] pb-1">
                       <span className="text-[#6B5744] font-semibold shrink-0">Pangkalan</span>
                       <span className="font-bold text-[#23170D] text-right truncate">
@@ -327,30 +346,50 @@ export const IdCardsShowcase: React.FC<IdCardsShowcaseProps> = ({ registration }
 
                 {/* BOTTOM FOOTER BAND */}
                 <div
-                  className={`bg-gradient-to-r ${headerGradient} py-2 px-3 text-center text-[9px] font-bold tracking-wider text-[#F3D299]`}
+                  className={`bg-gradient-to-r ${headerGradient} py-2 px-3 text-center text-[8.5px] font-bold tracking-wider text-[#F3D299]`}
                 >
                   PANITIA PESTA PENGGALANG KEC. MUARA KAMAN
                 </div>
               </div>
 
-              {/* Action Button Under Each Card */}
-              <button
-                type="button"
-                onClick={() => handleDownloadSingleCard(card)}
-                className="no-print w-full max-w-[330px] min-h-[44px] px-4 py-2 rounded-xl bg-white hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] font-semibold text-xs flex items-center justify-center gap-2 shadow-2xs active:scale-[0.99] transition-all cursor-pointer"
-              >
-                {downloadingId === card.id ? (
-                  <>
-                    <Check className="w-4 h-4 text-[#15803D]" />
-                    <span>Kartu PNG Berhasil Diunduh!</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 text-[#C81E1E]" />
-                    <span>Unduh Kartu Ini (PNG Portrait)</span>
-                  </>
-                )}
-              </button>
+              {/* Action Buttons Under Each Card (PDF & PNG) */}
+              <div className="no-print w-full max-w-[330px] grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDownloadSinglePdf(card)}
+                  className="min-h-[44px] px-3 py-2 rounded-xl bg-[#4A2C11] hover:bg-[#361F0B] text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  {downloadingId === `${card.id}-pdf` ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>PDF Diunduh!</span>
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="w-3.5 h-3.5 text-[#F3D299]" />
+                      <span>Unduh PDF</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDownloadSinglePng(card)}
+                  className="min-h-[44px] px-3 py-2 rounded-xl bg-white hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] font-semibold text-xs flex items-center justify-center gap-1.5 shadow-2xs active:scale-[0.99] transition-all cursor-pointer"
+                >
+                  {downloadingId === `${card.id}-png` ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-[#15803D]" />
+                      <span>PNG Diunduh!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5 text-[#C81E1E]" />
+                      <span>Unduh PNG</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           );
         })}

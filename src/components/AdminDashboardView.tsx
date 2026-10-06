@@ -22,7 +22,7 @@ import {
   formatRupiah,
 } from '../types/registration';
 import {
-  downloadPrintableAdminRecapHtml,
+  downloadAdminRecapAsPdf,
   downloadPaymentProofFile,
 } from '../utils/downloadHelpers';
 
@@ -152,14 +152,9 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   };
 
   const handlePrintRecap = () => {
-    downloadPrintableAdminRecapHtml(submissions);
+    downloadAdminRecapAsPdf(submissions);
     setRecapPrintedNotice(true);
     setTimeout(() => setRecapPrintedNotice(false), 3500);
-    try {
-      window.print();
-    } catch {
-      // Ignore if blocked in iframe
-    }
   };
 
   // IF NOT LOGGED IN -> SHOW ADMIN LOGIN FORM
@@ -321,12 +316,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             {recapPrintedNotice ? (
               <>
                 <Check className="w-4 h-4 text-emerald-300" />
-                <span>Dokumen Cetak Rekap Diunduh!</span>
+                <span>File PDF Rekap Diunduh!</span>
               </>
             ) : (
               <>
                 <Printer className="w-4 h-4" />
-                <span>Cetak / Simpan Rekap</span>
+                <span>Cetak / Unduh Rekap (.PDF)</span>
               </>
             )}
           </button>

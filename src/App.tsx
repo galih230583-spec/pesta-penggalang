@@ -20,6 +20,7 @@ import {
   History,
   ChevronRight,
   ShieldCheck,
+  IdCard,
 } from 'lucide-react';
 import {
   RegistrationFormData,
@@ -34,33 +35,19 @@ import { TunasKelapaLogo, WosmLogo } from './components/PramukaEmblems';
 import { SubmissionSuccessView } from './components/SubmissionSuccessView';
 import { AdminDashboardView } from './components/AdminDashboardView';
 
-const STORAGE_KEY_DRAFT = 'pramuka_muara_kaman_draft_v2';
 const STORAGE_KEY_SUBMISSIONS = 'pramuka_muara_kaman_submissions_v2';
 
+function createEmptyForm(): RegistrationFormData {
+  return {
+    ...INITIAL_FORM_DATA,
+    pesertaPutra: Array(8).fill(''),
+    pesertaPutri: Array(8).fill(''),
+  };
+}
+
 export default function App() {
-  const [formData, setFormData] = useState<RegistrationFormData>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_DRAFT);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...INITIAL_FORM_DATA,
-          ...parsed,
-          pesertaPutra:
-            Array.isArray(parsed.pesertaPutra) && parsed.pesertaPutra.length === 8
-              ? parsed.pesertaPutra
-              : Array(8).fill(''),
-          pesertaPutri:
-            Array.isArray(parsed.pesertaPutri) && parsed.pesertaPutri.length === 8
-              ? parsed.pesertaPutri
-              : Array(8).fill(''),
-        };
-      }
-    } catch {
-      // Ignore storage error
-    }
-    return INITIAL_FORM_DATA;
-  });
+  // Always start with a completely blank form on every link open / account
+  const [formData, setFormData] = useState<RegistrationFormData>(() => createEmptyForm());
 
   const [submissions, setSubmissions] = useState<SubmittedRegistration[]>(() => {
     try {
@@ -76,6 +63,7 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<'form' | 'success' | 'history' | 'admin'>('form');
   const [currentReceipt, setCurrentReceipt] = useState<SubmittedRegistration | null>(null);
+  const [receiptSubTab, setReceiptSubTab] = useState<'receipt' | 'cards'>('receipt');
 
   // Copy states
   const [copiedRekening, setCopiedRekening] = useState(false);
@@ -96,14 +84,33 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const errorBannerRef = useRef<HTMLDivElement | null>(null);
 
-  // Save draft to localStorage
+  // Clear any legacy saved draft & load shared registrations from server
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY_DRAFT, JSON.stringify(formData));
+      localStorage.removeItem('pramuka_muara_kaman_draft_v1');
+      localStorage.removeItem('pramuka_muara_kaman_draft_v2');
     } catch {
-      // Ignore quota errors if image is huge
+      // Ignore storage errors
     }
-  }, [formData]);
+
+    fetch('/api/registrations')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.registrations)) {
+          setSubmissions((prev) => {
+            const map = new Map<string, SubmittedRegistration>();
+            data.registrations.forEach((item: SubmittedRegistration) => map.set(item.id, item));
+            prev.forEach((item) => {
+              if (!map.has(item.id)) map.set(item.id, item);
+            });
+            return Array.from(map.values());
+          });
+        }
+      })
+      .catch(() => {
+        // Fallback to local state if offline
+      });
+  }, []);
 
   // Save submissions to localStorage
   useEffect(() => {
@@ -294,7 +301,7 @@ export default function App() {
   };
 
   const handleResetForm = () => {
-    setFormData(INITIAL_FORM_DATA);
+    setFormData(createEmptyForm());
     setValidationErrors([]);
     setUploadError(null);
     if (fileInputRef.current) {
@@ -316,10 +323,16 @@ export default function App() {
           : item
       )
     );
+    fetch(`/api/registrations/${encodeURIComponent(id)}/verify`, {
+      method: 'PATCH',
+    }).catch(() => {});
   };
 
   const handleDeleteSubmission = (id: string) => {
     setSubmissions((prev) => prev.filter((item) => item.id !== id));
+    fetch(`/api/registrations/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }).catch(() => {});
   };
 
   // Completion status checks (11 school & leader fields + 8 Putra + 8 Putri + 1 Bukti Bayar = 28 fields)
@@ -443,7 +456,20 @@ export default function App() {
     };
 
     setSubmissions((prev) => [newSubmission, ...prev]);
+    fetch('/api/registrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newSubmission),
+    }).catch(() => {});
+
+    // Automatically clear form inputs so the next school/account gets a clean empty form
+    setFormData(createEmptyForm());
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
     setCurrentReceipt(newSubmission);
+    setReceiptSubTab('receipt');
     setActiveView('success');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -613,8 +639,9 @@ export default function App() {
         {activeView === 'admin' ? (
           <AdminDashboardView
             submissions={submissions}
-            onViewReceipt={(reg) => {
+            onViewReceipt={(reg, initialTab = 'receipt') => {
               setCurrentReceipt(reg);
+              setReceiptSubTab(initialTab);
               setActiveView('success');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -628,12 +655,13 @@ export default function App() {
         ) : activeView === 'success' && currentReceipt ? (
           <SubmissionSuccessView
             registration={currentReceipt}
+            initialSubTab={receiptSubTab}
             onCreateNew={() => {
               handleResetForm();
               setActiveView('form');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
-            onBackToHistory={() => setActiveView('admin')}
+            onBackToHistory={() => setActiveView('history')}
           />
         ) : activeView === 'history' ? (
           /* RIWAYAT PENDAFTARAN YANG SUDAH DIKIRIM */
@@ -723,12 +751,25 @@ export default function App() {
                           type="button"
                           onClick={() => {
                             setCurrentReceipt(item);
+                            setReceiptSubTab('receipt');
                             setActiveView('success');
                           }}
                           className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] font-semibold text-sm flex items-center gap-2 cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
                           <span>Lihat Bukti</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentReceipt(item);
+                            setReceiptSubTab('cards');
+                            setActiveView('success');
+                          }}
+                          className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#C81E1E] hover:bg-[#A51717] text-white font-semibold text-sm flex items-center gap-2 cursor-pointer"
+                        >
+                          <IdCard className="w-4 h-4" />
+                          <span>Kartu Peserta (20)</span>
                         </button>
                         <a
                           href={waHref}
@@ -762,20 +803,12 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-[#6B5744] mt-0.5">
-                    Data tersimpan otomatis di perangkat Anda. Tombol dibuat berukuran besar agar
-                    nyaman diisi melalui HP.
+                    Formulir otomatis kosong setiap kali tautan dibuka atau selesai dikirim agar
+                    nyaman digunakan oleh seluruh sekolah/akun.
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setActiveView('admin')}
-                    className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-[#4A2C11]" />
-                    <span>Cek Login Admin ({submissions.length})</span>
-                  </button>
                   {submissions.length > 0 && (
                     <button
                       type="button"
@@ -783,7 +816,7 @@ export default function App() {
                       className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <History className="w-4 h-4" />
-                      <span>Riwayat ({submissions.length})</span>
+                      <span>Riwayat & Kartu Peserta ({submissions.length})</span>
                     </button>
                   )}
                   <button
