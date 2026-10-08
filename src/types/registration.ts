@@ -49,6 +49,9 @@ export const INFO_PEMBAYARAN = {
   biayaFormatted: 'Rp1.300.000,00',
   waPanitiaDisplay: '081253445433',
   waPanitiaInternational: '6281253445433',
+  waGroupName: 'WA Group Pesta Penggalang Kec. Muara Kaman',
+  waGroupLink:
+    'https://chat.whatsapp.com/JWHDv5RmDah8dEudHknLa1?s=sh&p=a&mlu=4&ilr=4',
 };
 
 export const INITIAL_FORM_DATA: RegistrationFormData = {

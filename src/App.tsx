@@ -2195,49 +2195,82 @@ export default function App() {
                   </span>
                 </button>
 
-                {/* Box Informasi Konfirmasi WhatsApp Panitia */}
-                <div className="rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-[#14532D]">
-                      KONFIRMASI WHATSAPP PANITIA PESTA PENGGALANG
-                    </p>
-                    <p className="text-sm text-[#5C4328]">
-                      Setelah mengirim formulir, konfirmasi langsung ke nomor panitia:{' '}
-                      <strong className="font-mono-num text-[#23170D] text-base">
-                        {INFO_PEMBAYARAN.waPanitiaDisplay}
-                      </strong>
-                    </p>
+                {/* Box Informasi Konfirmasi WhatsApp Panitia & WA Group Pesta Penggalang */}
+                <div className="rounded-2xl bg-[#FAF7F2] border border-[#E5DEC9] p-4 sm:p-5 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-[#14532D]">
+                        KONFIRMASI WHATSAPP PANITIA PESTA PENGGALANG
+                      </p>
+                      <p className="text-sm text-[#5C4328]">
+                        Setelah mengirim formulir, konfirmasi langsung ke nomor panitia:{' '}
+                        <strong className="font-mono-num text-[#23170D] text-base">
+                          {INFO_PEMBAYARAN.waPanitiaDisplay}
+                        </strong>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleCopyText(INFO_PEMBAYARAN.waPanitiaDisplay, 'wa')
+                        }
+                        className="min-h-[48px] px-4 py-2.5 rounded-xl bg-white hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] font-semibold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors"
+                      >
+                        {copiedWaNumber ? (
+                          <>
+                            <Check className="w-4 h-4 text-[#15803D]" />
+                            <span>Nomor Disalin!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            <span>Salin No. WA</span>
+                          </>
+                        )}
+                      </button>
+
+                      <a
+                        href={directWaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#14532D] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition-colors"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Chat WA ({INFO_PEMBAYARAN.waPanitiaDisplay})</span>
+                      </a>
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleCopyText(INFO_PEMBAYARAN.waPanitiaDisplay, 'wa')
-                      }
-                      className="min-h-[48px] px-4 py-2.5 rounded-xl bg-white hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] font-semibold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors"
-                    >
-                      {copiedWaNumber ? (
-                        <>
-                          <Check className="w-4 h-4 text-[#15803D]" />
-                          <span>Nomor Disalin!</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-4 h-4" />
-                          <span>Salin No. WA</span>
-                        </>
-                      )}
-                    </button>
+                  {/* WA Group Pesta Penggalang Kec. Muara Kaman */}
+                  <div className="pt-3.5 border-t border-[#E5DEC9] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-xs font-bold text-[#14532D] flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-[#15803D] shrink-0" />
+                        <span>{INFO_PEMBAYARAN.waGroupName}</span>
+                      </p>
+                      <p className="text-xs sm:text-sm text-[#5C4328] break-all">
+                        Buka tautan ini untuk bergabung ke grup WhatsApp saya:{' '}
+                        <a
+                          href={INFO_PEMBAYARAN.waGroupLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-[#15803D] underline hover:text-[#14532D]"
+                        >
+                          {INFO_PEMBAYARAN.waGroupLink}
+                        </a>
+                      </p>
+                    </div>
 
                     <a
-                      href={directWaUrl}
+                      href={INFO_PEMBAYARAN.waGroupLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#15803D] hover:bg-[#14532D] text-white font-semibold text-xs sm:text-sm flex items-center gap-2 transition-colors"
+                      className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#14532D] hover:bg-[#0F3F22] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 transition-colors"
                     >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Chat WA ({INFO_PEMBAYARAN.waPanitiaDisplay})</span>
+                      <Users className="w-4 h-4 shrink-0" />
+                      <span>Gabung WA Group Pesta Penggalang</span>
                     </a>
                   </div>
                 </div>

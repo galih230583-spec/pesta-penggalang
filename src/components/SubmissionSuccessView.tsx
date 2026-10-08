@@ -230,6 +230,37 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
                 {copiedPhone ? 'Nomor WA Disalin!' : 'Salin Nomor WA Panitia'}
               </button>
             </div>
+
+            {/* Tautan WA Group Pesta Penggalang Kec. Muara Kaman */}
+            <div className="mt-4 pt-4 border-t border-[#BBF7D0] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-white/80 p-4 rounded-2xl border border-[#BBF7D0]">
+              <div className="space-y-1 min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-[#14532D] flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-[#15803D] shrink-0" />
+                  <span>{INFO_PEMBAYARAN.waGroupName}</span>
+                </p>
+                <p className="text-xs sm:text-sm text-[#166534] break-all">
+                  Buka tautan ini untuk bergabung ke grup WhatsApp saya:{' '}
+                  <a
+                    href={INFO_PEMBAYARAN.waGroupLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-[#15803D] underline hover:text-[#14532D]"
+                  >
+                    {INFO_PEMBAYARAN.waGroupLink}
+                  </a>
+                </p>
+              </div>
+
+              <a
+                href={INFO_PEMBAYARAN.waGroupLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#14532D] hover:bg-[#0F3F22] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 transition-colors"
+              >
+                <Users className="w-4 h-4 shrink-0" />
+                <span>Gabung WA Group Pesta Penggalang</span>
+              </a>
+            </div>
           </div>
 
           {/* Bukti Pendaftaran Resmi */}
