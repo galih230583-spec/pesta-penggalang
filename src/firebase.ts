@@ -95,13 +95,19 @@ export async function optimizePaymentProofForFirestore(
   proof: PaymentProofFile | null
 ): Promise<PaymentProofFile | null> {
   if (!proof) return null;
-  if (!proof.dataUrl || proof.dataUrl.length <= 750000 || proof.fileType.includes('svg')) {
+  const safeFileName = String(proof.fileName || 'bukti_transfer').trim().slice(0, 300) || 'bukti_transfer';
+  const safeFileSize = Math.min(Math.max(0, Math.round(Number(proof.fileSize) || 0)), 10485760);
+  const safeFileType = String(proof.fileType || 'image/jpeg').trim().slice(0, 120) || 'image/jpeg';
+  const safeUploadedAt = String(proof.uploadedAt || '-').trim().slice(0, 64) || '-';
+  const rawDataUrl = String(proof.dataUrl || '');
+
+  if (!rawDataUrl || rawDataUrl.length <= 350000 || safeFileType.includes('svg')) {
     return {
-      fileName: (proof.fileName || 'bukti_transfer').slice(0, 300),
-      fileSize: Math.min(Math.max(0, Math.round(proof.fileSize || 0)), 10485760),
-      fileType: (proof.fileType || 'image/jpeg').slice(0, 120),
-      dataUrl: (proof.dataUrl || '').slice(0, 940000),
-      uploadedAt: (proof.uploadedAt || '-').slice(0, 64),
+      fileName: safeFileName,
+      fileSize: safeFileSize,
+      fileType: safeFileType,
+      dataUrl: rawDataUrl.slice(0, 800000),
+      uploadedAt: safeUploadedAt,
     };
   }
 
@@ -110,9 +116,9 @@ export async function optimizePaymentProofForFirestore(
     img.onload = () => {
       try {
         const canvas = document.createElement('canvas');
-        const maxDim = 1200;
-        let width = img.width;
-        let height = img.height;
+        const maxDim = 960;
+        let width = img.width || 800;
+        let height = img.height || 600;
         if (width > maxDim || height > maxDim) {
           if (width > height) {
             height = Math.round((height * maxDim) / width);
@@ -127,43 +133,47 @@ export async function optimizePaymentProofForFirestore(
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           resolve({
-            ...proof,
-            fileName: proof.fileName.slice(0, 300),
-            fileType: proof.fileType.slice(0, 120),
-            dataUrl: proof.dataUrl.slice(0, 940000),
-            uploadedAt: proof.uploadedAt.slice(0, 64),
+            fileName: safeFileName,
+            fileSize: safeFileSize,
+            fileType: safeFileType,
+            dataUrl: rawDataUrl.slice(0, 650000),
+            uploadedAt: safeUploadedAt,
           });
           return;
         }
         ctx.drawImage(img, 0, 0, width, height);
-        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.72);
+        let quality = 0.68;
+        let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        if (compressedDataUrl.length > 650000) {
+          compressedDataUrl = canvas.toDataURL('image/jpeg', 0.48);
+        }
         resolve({
-          fileName: proof.fileName.slice(0, 300),
+          fileName: safeFileName,
           fileSize: Math.min(Math.max(0, Math.round(compressedDataUrl.length * 0.75)), 10485760),
           fileType: 'image/jpeg',
-          dataUrl: compressedDataUrl.slice(0, 940000),
-          uploadedAt: proof.uploadedAt.slice(0, 64),
+          dataUrl: compressedDataUrl.slice(0, 650000),
+          uploadedAt: safeUploadedAt,
         });
       } catch {
         resolve({
-          ...proof,
-          fileName: proof.fileName.slice(0, 300),
-          fileType: proof.fileType.slice(0, 120),
-          dataUrl: proof.dataUrl.slice(0, 940000),
-          uploadedAt: proof.uploadedAt.slice(0, 64),
+          fileName: safeFileName,
+          fileSize: safeFileSize,
+          fileType: safeFileType,
+          dataUrl: rawDataUrl.slice(0, 650000),
+          uploadedAt: safeUploadedAt,
         });
       }
     };
     img.onerror = () => {
       resolve({
-        ...proof,
-        fileName: proof.fileName.slice(0, 300),
-        fileType: proof.fileType.slice(0, 120),
-        dataUrl: proof.dataUrl.slice(0, 940000),
-        uploadedAt: proof.uploadedAt.slice(0, 64),
+        fileName: safeFileName,
+        fileSize: safeFileSize,
+        fileType: safeFileType,
+        dataUrl: rawDataUrl.slice(0, 650000),
+        uploadedAt: safeUploadedAt,
       });
     };
-    img.src = proof.dataUrl;
+    img.src = rawDataUrl;
   });
 }
 
@@ -175,48 +185,78 @@ function normalizeArray8(arr: string[] | undefined, maxLen: number): string[] {
   return base.map((item) => String(item ?? '').trim().slice(0, maxLen));
 }
 
+function safeNonEmptyString(val: unknown, fallback: string, maxLen: number): string {
+  const trimmed = String(val ?? '').trim().slice(0, maxLen);
+  return trimmed.length > 0 ? trimmed : fallback;
+}
+
 export async function saveRegistrationToFirestore(reg: SubmittedRegistration): Promise<void> {
-  const safeId = reg.id.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
+  const rawId = String(reg.id || `reg-${Date.now()}`);
+  const safeId = rawId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128) || `reg-${Date.now()}`;
   const path = `${REGISTRATIONS_COLLECTION}/${safeId}`;
   const optimizedProof = await optimizePaymentProofForFirestore(reg.buktiPembayaran);
 
-  const payload = {
+  const rawJumlahRegu = Number(reg.jumlahRegu);
+  const safeJumlahRegu = Number.isFinite(rawJumlahRegu)
+    ? Math.min(Math.max(1, Math.round(rawJumlahRegu)), 10)
+    : 2;
+
+  const rawTotalBiaya = Number(reg.totalBiaya);
+  const safeTotalBiaya = Number.isFinite(rawTotalBiaya)
+    ? Math.min(Math.max(0, Math.round(rawTotalBiaya)), 100000000)
+    : 2600000;
+
+  const buildPayload = (proofValue: PaymentProofFile | null) => ({
     id: safeId,
-    nomorRegistrasi: (reg.nomorRegistrasi || 'PP-MK-2026-0000').trim().slice(0, 64),
-    tanggalDaftar: (reg.tanggalDaftar || '-').trim().slice(0, 100),
-    namaSekolah: (reg.namaSekolah || '-').trim().slice(0, 200),
-    namaKepalaSekolah: (reg.namaKepalaSekolah || '-').trim().slice(0, 200),
-    nipKepalaSekolah: (reg.nipKepalaSekolah || '-').trim().slice(0, 64),
-    namaPembinaPutra: (reg.namaPembinaPutra || '-').trim().slice(0, 200),
-    nipPembinaPutra: (reg.nipPembinaPutra || '-').trim().slice(0, 64),
-    namaPembinaPutra2: (reg.namaPembinaPutra2 || '').trim().slice(0, 200),
-    nipPembinaPutra2: (reg.nipPembinaPutra2 || '').trim().slice(0, 64),
-    namaPembinaPutri: (reg.namaPembinaPutri || '-').trim().slice(0, 200),
-    nipPembinaPutri: (reg.nipPembinaPutri || '-').trim().slice(0, 64),
-    namaPembinaPutri2: (reg.namaPembinaPutri2 || '').trim().slice(0, 200),
-    nipPembinaPutri2: (reg.nipPembinaPutri2 || '').trim().slice(0, 64),
-    namaReguPutra: (reg.namaReguPutra || '').trim().slice(0, 120),
-    namaReguPutri: (reg.namaReguPutri || '').trim().slice(0, 120),
+    nomorRegistrasi: safeNonEmptyString(reg.nomorRegistrasi, 'PP-MK-2026-0000', 64),
+    tanggalDaftar: safeNonEmptyString(reg.tanggalDaftar, '-', 100),
+    namaSekolah: safeNonEmptyString(reg.namaSekolah, 'Sekolah Peserta', 200),
+    namaKepalaSekolah: safeNonEmptyString(reg.namaKepalaSekolah, '-', 200),
+    nipKepalaSekolah: safeNonEmptyString(reg.nipKepalaSekolah, '-', 64),
+    namaPembinaPutra: safeNonEmptyString(reg.namaPembinaPutra, '-', 200),
+    nipPembinaPutra: safeNonEmptyString(reg.nipPembinaPutra, '-', 64),
+    namaPembinaPutra2: String(reg.namaPembinaPutra2 ?? '').trim().slice(0, 200),
+    nipPembinaPutra2: String(reg.nipPembinaPutra2 ?? '').trim().slice(0, 64),
+    namaPembinaPutri: safeNonEmptyString(reg.namaPembinaPutri, '-', 200),
+    nipPembinaPutri: safeNonEmptyString(reg.nipPembinaPutri, '-', 64),
+    namaPembinaPutri2: String(reg.namaPembinaPutri2 ?? '').trim().slice(0, 200),
+    nipPembinaPutri2: String(reg.nipPembinaPutri2 ?? '').trim().slice(0, 64),
+    namaReguPutra: String(reg.namaReguPutra ?? '').trim().slice(0, 120),
+    namaReguPutri: String(reg.namaReguPutri ?? '').trim().slice(0, 120),
     pesertaPutra: normalizeArray8(reg.pesertaPutra, 160),
     tempatLahirPutra: normalizeArray8(reg.tempatLahirPutra, 120),
     tanggalLahirPutra: normalizeArray8(reg.tanggalLahirPutra, 32),
     pesertaPutri: normalizeArray8(reg.pesertaPutri, 160),
     tempatLahirPutri: normalizeArray8(reg.tempatLahirPutri, 120),
     tanggalLahirPutri: normalizeArray8(reg.tanggalLahirPutri, 32),
-    jumlahRegu: Math.min(Math.max(1, Math.round(reg.jumlahRegu || 2)), 10),
-    totalBiaya: Math.min(Math.max(0, Math.round(reg.totalBiaya || 2600000)), 100000000),
+    jumlahRegu: safeJumlahRegu,
+    totalBiaya: safeTotalBiaya,
     statusVerifikasi:
       reg.statusVerifikasi === 'Terverifikasi' ? 'Terverifikasi' : 'Menunggu Verifikasi',
     pernyataanBenar: true,
-    buktiPembayaran: optimizedProof,
+    buktiPembayaran: proofValue,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  };
+  });
 
   try {
-    await setDoc(doc(db, REGISTRATIONS_COLLECTION, safeId), payload);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    await setDoc(doc(db, REGISTRATIONS_COLLECTION, safeId), buildPayload(optimizedProof));
+  } catch (firstError) {
+    // If the proof image is still too large or malformed, retry with lightweight proof metadata
+    try {
+      const compactProof: PaymentProofFile | null = optimizedProof
+        ? {
+            fileName: optimizedProof.fileName,
+            fileSize: optimizedProof.fileSize,
+            fileType: optimizedProof.fileType,
+            dataUrl: optimizedProof.dataUrl.slice(0, 250000),
+            uploadedAt: optimizedProof.uploadedAt,
+          }
+        : null;
+      await setDoc(doc(db, REGISTRATIONS_COLLECTION, safeId), buildPayload(compactProof));
+    } catch (error) {
+      handleFirestoreError(error ?? firstError, OperationType.CREATE, path);
+    }
   }
 }
 

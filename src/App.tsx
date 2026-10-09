@@ -43,7 +43,7 @@ import {
 } from './firebase';
 
 const STORAGE_KEY_SUBMISSIONS = 'pramuka_muara_kaman_submissions_v2';
-const STORAGE_KEY_SYNCED_IDS = 'pramuka_muara_kaman_firestore_synced_v1';
+const STORAGE_KEY_SYNCED_IDS = 'pramuka_muara_kaman_firestore_synced_v2';
 
 function createEmptyForm(): RegistrationFormData {
   return {
@@ -65,7 +65,10 @@ export default function App() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY_SUBMISSIONS);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item) => item && item.id !== 'reg-1791548760281');
+        }
       }
     } catch {
       // Ignore storage error
@@ -133,8 +136,13 @@ export default function App() {
         const localSaved = localStorage.getItem(STORAGE_KEY_SUBMISSIONS);
         const localList: SubmittedRegistration[] = localSaved ? JSON.parse(localSaved) : [];
 
-        localList.forEach((localItem) => {
-          if (localItem && localItem.id && !cloudIds.has(localItem.id) && !syncedSet.has(localItem.id)) {
+        // Remove old demo/test entry if present in localStorage
+        const filteredLocal = localList.filter(
+          (item) => item && item.id && item.id !== 'reg-1791548760281'
+        );
+
+        filteredLocal.forEach((localItem) => {
+          if (!cloudIds.has(localItem.id) && !syncedSet.has(localItem.id)) {
             syncedSet.add(localItem.id);
             saveRegistrationToFirestore(localItem).catch(() => {});
           }
@@ -145,7 +153,20 @@ export default function App() {
         // Ignore storage errors
       }
 
-      setSubmissions(cloudRegistrations);
+      setSubmissions((prev) => {
+        const map = new Map<string, SubmittedRegistration>();
+        cloudRegistrations
+          .filter((r) => r.id !== 'reg-1791548760281')
+          .forEach((item) => map.set(item.id, item));
+        prev
+          .filter((r) => r && r.id && r.id !== 'reg-1791548760281')
+          .forEach((item) => {
+            if (!map.has(item.id)) {
+              map.set(item.id, item);
+            }
+          });
+        return Array.from(map.values());
+      });
     });
 
     return () => {
