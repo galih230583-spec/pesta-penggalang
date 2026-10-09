@@ -35,8 +35,15 @@ import {
 import { TunasKelapaLogo, WosmLogo } from './components/PramukaEmblems';
 import { SubmissionSuccessView } from './components/SubmissionSuccessView';
 import { AdminDashboardView } from './components/AdminDashboardView';
+import {
+  subscribeToAllRegistrations,
+  saveRegistrationToFirestore,
+  updateRegistrationVerificationInFirestore,
+  deleteRegistrationFromFirestore,
+} from './firebase';
 
 const STORAGE_KEY_SUBMISSIONS = 'pramuka_muara_kaman_submissions_v2';
+const STORAGE_KEY_SYNCED_IDS = 'pramuka_muara_kaman_firestore_synced_v1';
 
 function createEmptyForm(): RegistrationFormData {
   return {
@@ -89,7 +96,7 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const errorBannerRef = useRef<HTMLDivElement | null>(null);
 
-  // Clear any legacy saved draft & load shared registrations from server
+  // Clear any legacy saved draft & subscribe to centralized Firebase Firestore registrations
   useEffect(() => {
     try {
       localStorage.removeItem('pramuka_muara_kaman_draft_v1');
@@ -98,6 +105,7 @@ export default function App() {
       // Ignore storage errors
     }
 
+    // Also load any server fallback registrations
     fetch('/api/registrations')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -112,9 +120,37 @@ export default function App() {
           });
         }
       })
-      .catch(() => {
-        // Fallback to local state if offline
-      });
+      .catch(() => {});
+
+    // Real-time listener to Firestore so every school registered from any account/device appears in Admin
+    const unsubscribe = subscribeToAllRegistrations((cloudRegistrations) => {
+      const cloudIds = new Set(cloudRegistrations.map((r) => r.id));
+
+      // Backfill any local-only registration that hasn't been uploaded to Firestore yet
+      try {
+        const syncedRaw = localStorage.getItem(STORAGE_KEY_SYNCED_IDS);
+        const syncedSet = new Set<string>(syncedRaw ? JSON.parse(syncedRaw) : []);
+        const localSaved = localStorage.getItem(STORAGE_KEY_SUBMISSIONS);
+        const localList: SubmittedRegistration[] = localSaved ? JSON.parse(localSaved) : [];
+
+        localList.forEach((localItem) => {
+          if (localItem && localItem.id && !cloudIds.has(localItem.id) && !syncedSet.has(localItem.id)) {
+            syncedSet.add(localItem.id);
+            saveRegistrationToFirestore(localItem).catch(() => {});
+          }
+        });
+        cloudRegistrations.forEach((c) => syncedSet.add(c.id));
+        localStorage.setItem(STORAGE_KEY_SYNCED_IDS, JSON.stringify(Array.from(syncedSet)));
+      } catch {
+        // Ignore storage errors
+      }
+
+      setSubmissions(cloudRegistrations);
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Save submissions to localStorage
@@ -393,19 +429,21 @@ export default function App() {
   };
 
   const handleToggleVerify = (id: string) => {
+    const target = submissions.find((item) => item.id === id);
+    const nextStatus: 'Menunggu Verifikasi' | 'Terverifikasi' =
+      target?.statusVerifikasi === 'Terverifikasi' ? 'Menunggu Verifikasi' : 'Terverifikasi';
+
     setSubmissions((prev) =>
       prev.map((item) =>
         item.id === id
           ? {
               ...item,
-              statusVerifikasi:
-                item.statusVerifikasi === 'Terverifikasi'
-                  ? 'Menunggu Verifikasi'
-                  : 'Terverifikasi',
+              statusVerifikasi: nextStatus,
             }
           : item
       )
     );
+    updateRegistrationVerificationInFirestore(id, nextStatus).catch(() => {});
     fetch(`/api/registrations/${encodeURIComponent(id)}/verify`, {
       method: 'PATCH',
     }).catch(() => {});
@@ -413,6 +451,7 @@ export default function App() {
 
   const handleDeleteSubmission = (id: string) => {
     setSubmissions((prev) => prev.filter((item) => item.id !== id));
+    deleteRegistrationFromFirestore(id).catch(() => {});
     fetch(`/api/registrations/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }).catch(() => {});
@@ -640,7 +679,8 @@ export default function App() {
       statusVerifikasi: 'Menunggu Verifikasi',
     };
 
-    setSubmissions((prev) => [newSubmission, ...prev]);
+    setSubmissions((prev) => [newSubmission, ...prev.filter((i) => i.id !== newSubmission.id)]);
+    saveRegistrationToFirestore(newSubmission).catch(() => {});
     fetch('/api/registrations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

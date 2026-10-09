@@ -1,0 +1,133 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidStringArray8(arr, maxElemLen) {
+      return arr is list &&
+        arr.size() == 8 &&
+        arr[0] is string && arr[0].size() <= maxElemLen &&
+        arr[1] is string && arr[1].size() <= maxElemLen &&
+        arr[2] is string && arr[2].size() <= maxElemLen &&
+        arr[3] is string && arr[3].size() <= maxElemLen &&
+        arr[4] is string && arr[4].size() <= maxElemLen &&
+        arr[5] is string && arr[5].size() <= maxElemLen &&
+        arr[6] is string && arr[6].size() <= maxElemLen &&
+        arr[7] is string && arr[7].size() <= maxElemLen;
+    }
+
+    function isValidPaymentProof(proof) {
+      return proof == null || (
+        proof is map &&
+        proof.keys().hasAll(['fileName', 'fileSize', 'fileType', 'dataUrl', 'uploadedAt']) &&
+        proof.keys().hasOnly(['fileName', 'fileSize', 'fileType', 'dataUrl', 'uploadedAt']) &&
+        proof.fileName is string && proof.fileName.size() <= 300 &&
+        proof.fileSize is int && proof.fileSize >= 0 && proof.fileSize <= 10485760 &&
+        proof.fileType is string && proof.fileType.size() <= 120 &&
+        proof.dataUrl is string && proof.dataUrl.size() <= 950000 &&
+        proof.uploadedAt is string && proof.uploadedAt.size() <= 64
+      );
+    }
+
+    function isValidRegistration(data, registrationId) {
+      let allowedKeys = [
+        'id',
+        'nomorRegistrasi',
+        'tanggalDaftar',
+        'namaSekolah',
+        'namaKepalaSekolah',
+        'nipKepalaSekolah',
+        'namaPembinaPutra',
+        'nipPembinaPutra',
+        'namaPembinaPutra2',
+        'nipPembinaPutra2',
+        'namaPembinaPutri',
+        'nipPembinaPutri',
+        'namaPembinaPutri2',
+        'nipPembinaPutri2',
+        'namaReguPutra',
+        'namaReguPutri',
+        'pesertaPutra',
+        'tempatLahirPutra',
+        'tanggalLahirPutra',
+        'pesertaPutri',
+        'tempatLahirPutri',
+        'tanggalLahirPutri',
+        'jumlahRegu',
+        'totalBiaya',
+        'statusVerifikasi',
+        'pernyataanBenar',
+        'buktiPembayaran',
+        'createdAt',
+        'updatedAt'
+      ];
+      return data.keys().hasAll(allowedKeys) &&
+        data.keys().hasOnly(allowedKeys) &&
+        data.id is string && data.id == registrationId && data.id.size() <= 128 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.nomorRegistrasi is string && data.nomorRegistrasi.size() >= 1 && data.nomorRegistrasi.size() <= 64 &&
+        data.tanggalDaftar is string && data.tanggalDaftar.size() >= 1 && data.tanggalDaftar.size() <= 100 &&
+        data.namaSekolah is string && data.namaSekolah.size() >= 1 && data.namaSekolah.size() <= 200 &&
+        data.namaKepalaSekolah is string && data.namaKepalaSekolah.size() >= 1 && data.namaKepalaSekolah.size() <= 200 &&
+        data.nipKepalaSekolah is string && data.nipKepalaSekolah.size() >= 1 && data.nipKepalaSekolah.size() <= 64 &&
+        data.namaPembinaPutra is string && data.namaPembinaPutra.size() >= 1 && data.namaPembinaPutra.size() <= 200 &&
+        data.nipPembinaPutra is string && data.nipPembinaPutra.size() >= 1 && data.nipPembinaPutra.size() <= 64 &&
+        data.namaPembinaPutra2 is string && data.namaPembinaPutra2.size() <= 200 &&
+        data.nipPembinaPutra2 is string && data.nipPembinaPutra2.size() <= 64 &&
+        data.namaPembinaPutri is string && data.namaPembinaPutri.size() >= 1 && data.namaPembinaPutri.size() <= 200 &&
+        data.nipPembinaPutri is string && data.nipPembinaPutri.size() >= 1 && data.nipPembinaPutri.size() <= 64 &&
+        data.namaPembinaPutri2 is string && data.namaPembinaPutri2.size() <= 200 &&
+        data.nipPembinaPutri2 is string && data.nipPembinaPutri2.size() <= 64 &&
+        data.namaReguPutra is string && data.namaReguPutra.size() <= 120 &&
+        data.namaReguPutri is string && data.namaReguPutri.size() <= 120 &&
+        isValidStringArray8(data.pesertaPutra, 160) &&
+        isValidStringArray8(data.tempatLahirPutra, 120) &&
+        isValidStringArray8(data.tanggalLahirPutra, 32) &&
+        isValidStringArray8(data.pesertaPutri, 160) &&
+        isValidStringArray8(data.tempatLahirPutri, 120) &&
+        isValidStringArray8(data.tanggalLahirPutri, 32) &&
+        data.jumlahRegu is int && data.jumlahRegu >= 1 && data.jumlahRegu <= 10 &&
+        data.totalBiaya is int && data.totalBiaya >= 0 && data.totalBiaya <= 100000000 &&
+        data.statusVerifikasi is string && data.statusVerifikasi.size() <= 40 &&
+        data.statusVerifikasi in ['Menunggu Verifikasi', 'Terverifikasi'] &&
+        data.pernyataanBenar is bool &&
+        isValidPaymentProof(data.buktiPembayaran) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    match /registrations/{registrationId} {
+      allow get: if isValidId(registrationId);
+      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+
+      allow create: if isValidId(registrationId) &&
+        isValidRegistration(incoming(), registrationId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isValidId(registrationId) &&
+        isValidRegistration(incoming(), registrationId) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['statusVerifikasi', 'updatedAt']);
+
+      allow delete: if isValidId(registrationId);
+    }
+  }
+}
