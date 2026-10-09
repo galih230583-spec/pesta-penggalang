@@ -39,7 +39,7 @@ service cloud.firestore {
         proof.keys().hasAll(['fileName', 'fileSize', 'fileType', 'dataUrl', 'uploadedAt']) &&
         proof.keys().hasOnly(['fileName', 'fileSize', 'fileType', 'dataUrl', 'uploadedAt']) &&
         proof.fileName is string && proof.fileName.size() <= 300 &&
-        proof.fileSize is int && proof.fileSize >= 0 && proof.fileSize <= 10485760 &&
+        (proof.fileSize is int || proof.fileSize is float) && proof.fileSize >= 0 && proof.fileSize <= 10485760 &&
         proof.fileType is string && proof.fileType.size() <= 120 &&
         proof.dataUrl is string && proof.dataUrl.size() <= 950000 &&
         proof.uploadedAt is string && proof.uploadedAt.size() <= 64
@@ -102,11 +102,12 @@ service cloud.firestore {
         isValidStringArray8(data.pesertaPutri, 160) &&
         isValidStringArray8(data.tempatLahirPutri, 120) &&
         isValidStringArray8(data.tanggalLahirPutri, 32) &&
-        data.jumlahRegu is int && data.jumlahRegu >= 1 && data.jumlahRegu <= 10 &&
-        data.totalBiaya is int && data.totalBiaya >= 0 && data.totalBiaya <= 100000000 &&
+        (data.jumlahRegu is int || data.jumlahRegu is float) && data.jumlahRegu >= 1 && data.jumlahRegu <= 10 &&
+        (data.totalBiaya is int || data.totalBiaya is float) && data.totalBiaya >= 0 && data.totalBiaya <= 100000000 &&
         data.statusVerifikasi is string && data.statusVerifikasi.size() <= 40 &&
         data.statusVerifikasi in ['Menunggu Verifikasi', 'Terverifikasi'] &&
         data.pernyataanBenar is bool &&
+        data.pernyataanBenar == true &&
         isValidPaymentProof(data.buktiPembayaran) &&
         data.createdAt is timestamp &&
         data.updatedAt is timestamp;
@@ -114,7 +115,9 @@ service cloud.firestore {
 
     match /registrations/{registrationId} {
       allow get: if isValidId(registrationId);
-      allow list: if resource.data.id is string && resource.data.id.size() <= 128;
+      allow list: if resource.data.pernyataanBenar == true &&
+        request.query.limit != null &&
+        request.query.limit <= 500;
 
       allow create: if isValidId(registrationId) &&
         isValidRegistration(incoming(), registrationId) &&

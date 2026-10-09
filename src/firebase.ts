@@ -11,7 +11,8 @@ import {
   getDocFromServer,
   serverTimestamp,
   query,
-  orderBy,
+  where,
+  limit,
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
 import { SubmittedRegistration, PaymentProofFile } from '../types/registration';
@@ -188,12 +189,12 @@ export async function saveRegistrationToFirestore(reg: SubmittedRegistration): P
     nipKepalaSekolah: (reg.nipKepalaSekolah || '-').trim().slice(0, 64),
     namaPembinaPutra: (reg.namaPembinaPutra || '-').trim().slice(0, 200),
     nipPembinaPutra: (reg.nipPembinaPutra || '-').trim().slice(0, 64),
-    namaPembinaPutra2: (reg.namaPembinaPutra2 || '-').trim().slice(0, 200),
-    nipPembinaPutra2: (reg.nipPembinaPutra2 || '-').trim().slice(0, 64),
+    namaPembinaPutra2: (reg.namaPembinaPutra2 || '').trim().slice(0, 200),
+    nipPembinaPutra2: (reg.nipPembinaPutra2 || '').trim().slice(0, 64),
     namaPembinaPutri: (reg.namaPembinaPutri || '-').trim().slice(0, 200),
     nipPembinaPutri: (reg.nipPembinaPutri || '-').trim().slice(0, 64),
-    namaPembinaPutri2: (reg.namaPembinaPutri2 || '-').trim().slice(0, 200),
-    nipPembinaPutri2: (reg.nipPembinaPutri2 || '-').trim().slice(0, 64),
+    namaPembinaPutri2: (reg.namaPembinaPutri2 || '').trim().slice(0, 200),
+    nipPembinaPutri2: (reg.nipPembinaPutri2 || '').trim().slice(0, 64),
     namaReguPutra: (reg.namaReguPutra || '').trim().slice(0, 120),
     namaReguPutri: (reg.namaReguPutri || '').trim().slice(0, 120),
     pesertaPutra: normalizeArray8(reg.pesertaPutra, 160),
@@ -206,7 +207,7 @@ export async function saveRegistrationToFirestore(reg: SubmittedRegistration): P
     totalBiaya: Math.min(Math.max(0, Math.round(reg.totalBiaya || 2600000)), 100000000),
     statusVerifikasi:
       reg.statusVerifikasi === 'Terverifikasi' ? 'Terverifikasi' : 'Menunggu Verifikasi',
-    pernyataanBenar: Boolean(reg.pernyataanBenar),
+    pernyataanBenar: true,
     buktiPembayaran: optimizedProof,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -248,11 +249,24 @@ export async function deleteRegistrationFromFirestore(id: string): Promise<void>
 export function subscribeToAllRegistrations(
   onData: (registrations: SubmittedRegistration[]) => void
 ): () => void {
-  const q = query(collection(db, REGISTRATIONS_COLLECTION), orderBy('createdAt', 'desc'));
+  const q = query(
+    collection(db, REGISTRATIONS_COLLECTION),
+    where('pernyataanBenar', '==', true),
+    limit(500)
+  );
   return onSnapshot(
     q,
     (snapshot) => {
-      const items: SubmittedRegistration[] = snapshot.docs.map((docSnap) => {
+      const sortedDocs = [...snapshot.docs].sort((a, b) => {
+        const aData = a.data();
+        const bData = b.data();
+        const aTime =
+          typeof aData.createdAt?.toMillis === 'function' ? aData.createdAt.toMillis() : Date.now();
+        const bTime =
+          typeof bData.createdAt?.toMillis === 'function' ? bData.createdAt.toMillis() : Date.now();
+        return bTime - aTime;
+      });
+      const items: SubmittedRegistration[] = sortedDocs.map((docSnap) => {
         const d = docSnap.data();
         return {
           id: d.id || docSnap.id,
