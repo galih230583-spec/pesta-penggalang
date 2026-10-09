@@ -445,7 +445,7 @@ export async function downloadReceiptAsPng(reg: SubmittedRegistration): Promise<
 export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanvasElement> {
   const canvas = document.createElement('canvas');
   const width = 900;
-  const height = 1380;
+  const height = 1150; // 11 cm height proportion (86mm x 110mm)
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
@@ -482,7 +482,7 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   // Clip entire card to rounded rectangle (matches rounded-3xl in preview)
   ctx.save();
   ctx.beginPath();
-  ctx.roundRect(0, 0, width, height, 56);
+  ctx.roundRect(0, 0, width, height, 52);
   ctx.clip();
 
   // Base cream background (#FAF7F2)
@@ -490,7 +490,7 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   ctx.fillRect(0, 0, width, height);
 
   // 1. TOP HEADER BLOCK WITH GRADIENT
-  const headerH = 265;
+  const headerH = 228;
   const headerGrad = ctx.createLinearGradient(0, 0, 0, headerH);
   headerGrad.addColorStop(0, colors.gradStart);
   headerGrad.addColorStop(0.5, colors.gradMid);
@@ -501,54 +501,54 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   // Lanyard Hole Pill at top center
   ctx.fillStyle = '#FAF7F2';
   ctx.beginPath();
-  ctx.roundRect(width / 2 - 58, 28, 116, 20, 10);
+  ctx.roundRect(width / 2 - 58, 20, 116, 18, 9);
   ctx.fill();
 
   // Left White Emblem Box (Tunas Kelapa)
   const leftBoxX = 44;
-  const boxY = 74;
-  const boxSize = 104;
+  const boxY = 60;
+  const boxSize = 100;
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
-  ctx.roundRect(leftBoxX, boxY, boxSize, boxSize, 26);
+  ctx.roundRect(leftBoxX, boxY, boxSize, boxSize, 24);
   ctx.fill();
 
   const tunasImg = await loadImage(
     `data:image/svg+xml;utf8,${encodeURIComponent(TUNAS_KELAPA_SVG)}`
   );
   if (tunasImg) {
-    ctx.drawImage(tunasImg, leftBoxX + 18, boxY + 10, 68, 84);
+    ctx.drawImage(tunasImg, leftBoxX + 16, boxY + 8, 68, 84);
   }
 
   // Right White Emblem Box (WOSM)
   const rightBoxX = width - 44 - boxSize;
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
-  ctx.roundRect(rightBoxX, boxY, boxSize, boxSize, 26);
+  ctx.roundRect(rightBoxX, boxY, boxSize, boxSize, 24);
   ctx.fill();
 
   const wosmImg = await loadImage(
     `data:image/svg+xml;utf8,${encodeURIComponent(WOSM_SVG)}`
   );
   if (wosmImg) {
-    ctx.drawImage(wosmImg, rightBoxX + 12, boxY + 12, 80, 80);
+    ctx.drawImage(wosmImg, rightBoxX + 10, boxY + 10, 80, 80);
   }
 
-  // Center Header Titles (Enlarged & Adjusted)
+  // Center Header Titles (Unchanged text & sizes)
   ctx.textAlign = 'center';
   ctx.fillStyle = '#F3D299';
   ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('GERAKAN PRAMUKA KWARRAN', width / 2, 106);
+  ctx.fillText('GERAKAN PRAMUKA KWARRAN', width / 2, 92);
   ctx.font = '800 27px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('KECAMATAN MUARA KAMAN', width / 2, 140);
+  ctx.fillText('KECAMATAN MUARA KAMAN', width / 2, 125);
 
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 42px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('PESTA PENGGALANG', width / 2, 194);
+  ctx.fillText('PESTA PENGGALANG', width / 2, 176);
 
   // 2. PITA MERAH PUTIH KACU PRAMUKA (Left 50% Red, Right 50% White)
   const ribbonY = headerH;
-  const ribbonH = 24;
+  const ribbonH = 20;
   ctx.fillStyle = '#C81E1E';
   ctx.fillRect(0, ribbonY, width / 2, ribbonH);
   ctx.fillStyle = '#FFFFFF';
@@ -560,12 +560,12 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   ctx.lineTo(width, ribbonY + ribbonH);
   ctx.stroke();
 
-  // 3. WIDENED PORTRAIT PHOTO FRAME WITH ALL CORNERS ROUNDED (Matches w-[116px] h-[148px] in preview)
-  const photoW = 300;
-  const photoH = 384;
+  // 3. WIDENED PORTRAIT PHOTO FRAME WITH ALL CORNERS ROUNDED (Fitted neatly for 11 cm height)
+  const photoW = 264;
+  const photoH = 324;
   const photoX = (width - photoW) / 2;
-  const photoY = 318;
-  const photoRadius = 38;
+  const photoY = 266;
+  const photoRadius = 34;
 
   // Draw white inner background & clip for photo
   ctx.save();
@@ -590,7 +590,7 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
       );
     }
   } else {
-    // Same placeholder as preview: Initials + PRAMUKA + PASFOTO 4x6
+    // Same placeholder as preview: Initials + PRAMUKA + PASFOTO 4x6 (Unchanged text)
     const initials = card.nama
       .split(' ')
       .filter(Boolean)
@@ -600,15 +600,15 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
     ctx.textAlign = 'center';
     ctx.fillStyle = '#4A2C11';
     ctx.font = '800 84px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(initials || 'GP', width / 2, photoY + 185);
+    ctx.fillText(initials || 'GP', width / 2, photoY + 155);
 
     ctx.fillStyle = '#7A5C3E';
     ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('PRAMUKA', width / 2, photoY + 238);
+    ctx.fillText('PRAMUKA', width / 2, photoY + 206);
 
     ctx.fillStyle = '#A38B73';
     ctx.font = '600 23px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText('PASFOTO 4x6', width / 2, photoY + 280);
+    ctx.fillText('PASFOTO 4x6', width / 2, photoY + 245);
   }
   ctx.restore();
 
@@ -619,41 +619,41 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   ctx.strokeStyle = colors.frameBorder;
   ctx.stroke();
 
-  // 4. ROLE / CATEGORY PILL (Enlarged)
-  const pillY = 724;
+  // 4. ROLE / CATEGORY PILL (Unchanged text & font size)
+  const pillY = 608;
   const pillW = 390;
-  const pillH = 60;
+  const pillH = 54;
   ctx.fillStyle = colors.roleBadge;
   ctx.beginPath();
-  ctx.roundRect((width - pillW) / 2, pillY, pillW, pillH, 30);
+  ctx.roundRect((width - pillW) / 2, pillY, pillW, pillH, 27);
   ctx.fill();
 
   ctx.textAlign = 'center';
   ctx.fillStyle = '#FFFFFF';
   ctx.font = '800 29px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.kategori, width / 2, pillY + 40);
+  ctx.fillText(card.kategori, width / 2, pillY + 37);
 
-  // 5. FULL NAME & JABATAN (Enlarged & Adjusted)
+  // 5. FULL NAME & JABATAN (Unchanged text & font size)
   ctx.fillStyle = '#23170D';
   ctx.font = '800 45px "Plus Jakarta Sans", sans-serif';
   if (ctx.measureText(card.nama).width > 800) {
     ctx.font = '800 36px "Plus Jakarta Sans", sans-serif';
   }
-  ctx.fillText(card.nama, width / 2, 838);
+  ctx.fillText(card.nama, width / 2, 710);
 
   ctx.fillStyle = '#7A5C3E';
   ctx.font = 'bold 31px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.jabatan, width / 2, 884);
+  ctx.fillText(card.jabatan, width / 2, 750);
 
-  // 6. DETAILS TABLE CARD (Enlarged Text)
+  // 6. DETAILS TABLE CARD (Unchanged text & font size)
   const tableX = 46;
-  const tableY = 916;
+  const tableY = 774;
   const tableW = width - 92;
-  const tableH = 330;
+  const tableH = 278;
 
   ctx.fillStyle = '#FFFFFF';
   ctx.beginPath();
-  ctx.roundRect(tableX, tableY, tableW, tableH, 36);
+  ctx.roundRect(tableX, tableY, tableW, tableH, 32);
   ctx.fill();
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#E5DEC9';
@@ -666,49 +666,49 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
   ctx.font = '600 30px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('Pangkalan', leftPad, tableY + 76);
+  ctx.fillText('Pangkalan', leftPad, tableY + 66);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#23170D';
   ctx.font = '800 30px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.namaSekolah, rightPad, tableY + 76);
+  ctx.fillText(card.namaSekolah, rightPad, tableY + 66);
 
   ctx.strokeStyle = '#F3ECE0';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(leftPad, tableY + 110);
-  ctx.lineTo(rightPad, tableY + 110);
+  ctx.moveTo(leftPad, tableY + 94);
+  ctx.lineTo(rightPad, tableY + 94);
   ctx.stroke();
 
   // Row 2: NIP / Regu
   ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
   ctx.font = '600 30px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText(card.nipAtauReguLabel, leftPad, tableY + 180);
+  ctx.fillText(card.nipAtauReguLabel, leftPad, tableY + 154);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#23170D';
   ctx.font = 'bold 30px "JetBrains Mono", monospace';
-  ctx.fillText(card.nipAtauReguValue, rightPad, tableY + 180);
+  ctx.fillText(card.nipAtauReguValue, rightPad, tableY + 154);
 
   ctx.beginPath();
-  ctx.moveTo(leftPad, tableY + 214);
-  ctx.lineTo(rightPad, tableY + 214);
+  ctx.moveTo(leftPad, tableY + 182);
+  ctx.lineTo(rightPad, tableY + 182);
   ctx.stroke();
 
   // Row 3: ID Kartu
   ctx.textAlign = 'left';
   ctx.fillStyle = '#6B5744';
   ctx.font = '600 30px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('ID Kartu', leftPad, tableY + 284);
+  ctx.fillText('ID Kartu', leftPad, tableY + 242);
 
   ctx.textAlign = 'right';
   ctx.fillStyle = '#4A2C11';
   ctx.font = '800 30px "JetBrains Mono", monospace';
-  ctx.fillText(card.nomorKartu, rightPad, tableY + 284);
+  ctx.fillText(card.nomorKartu, rightPad, tableY + 242);
 
-  // 7. BOTTOM FOOTER BAND (Enlarged Text)
-  const footerH = 92;
+  // 7. BOTTOM FOOTER BAND (Unchanged text & font size)
+  const footerH = 78;
   const footerY = height - footerH;
   const footerGrad = ctx.createLinearGradient(0, footerY, width, footerY);
   footerGrad.addColorStop(0, colors.gradStart);
@@ -723,14 +723,14 @@ export async function renderIdCardToCanvas(card: IdCardPerson): Promise<HTMLCanv
   ctx.fillText(
     'PANITIA PESTA PENGGALANG KEC. MUARA KAMAN',
     width / 2,
-    footerY + 56
+    footerY + 48
   );
 
   ctx.restore();
 
   // Outer Rounded Card Border (#4A2C11)
   ctx.beginPath();
-  ctx.roundRect(4, 4, width - 8, height - 8, 56);
+  ctx.roundRect(4, 4, width - 8, height - 8, 52);
   ctx.lineWidth = 8;
   ctx.strokeStyle = '#4A2C11';
   ctx.stroke();
@@ -754,7 +754,7 @@ export async function downloadIdCardAsPng(card: IdCardPerson): Promise<void> {
 }
 
 /**
- * Downloads a single Portrait ID Card directly as a PDF (.pdf)
+ * Downloads a single Portrait ID Card directly as a PDF (.pdf) with exact 11 cm height (86mm x 110mm)
  */
 export async function downloadSingleIdCardAsPdf(card: IdCardPerson): Promise<void> {
   const canvas = await renderIdCardToCanvas(card);
@@ -762,16 +762,16 @@ export async function downloadSingleIdCardAsPdf(card: IdCardPerson): Promise<voi
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
-    format: [86, 132],
+    format: [86, 110], // 8.6 cm x 11 cm
   });
-  pdf.addImage(imgData, 'JPEG', 0, 0, 86, 132);
+  pdf.addImage(imgData, 'JPEG', 0, 0, 86, 110);
   const safeName = card.nama.replace(/[^a-zA-Z0-9_-]/g, '_');
   pdf.save(`Kartu_${card.kategori.replace(/\s+/g, '_')}_${safeName}.pdf`);
 }
 
 /**
  * Renders all selected Portrait ID Cards using the exact preview renderer and packs them
- * into a multi-page A4 Portrait PDF (.pdf) file (4 cards per page, 2x2 grid) and downloads it immediately.
+ * into a multi-page A4 Portrait PDF (.pdf) file (4 cards per page, 2x2 grid, each card 11 cm high) and downloads it immediately.
  */
 export async function downloadAllCardsAsPdf(
   reg: SubmittedRegistration,
@@ -786,11 +786,11 @@ export async function downloadAllCardsAsPdf(
   });
 
   const cardWidthMm = 86;
-  const cardHeightMm = 132;
+  const cardHeightMm = 110; // Exact 11 cm height
   const marginX = 14;
-  const marginY = 12;
+  const marginY = 28;
   const gapX = 10;
-  const gapY = 9;
+  const gapY = 18;
 
   for (let i = 0; i < cards.length; i++) {
     const slotIndex = i % 4;

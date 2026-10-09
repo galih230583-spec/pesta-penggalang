@@ -25,6 +25,7 @@ import {
   downloadReceiptAsPdf,
   downloadPaymentProofFile,
 } from '../utils/downloadHelpers';
+import { downloadOfficialJuknis2026Pdf } from '../utils/juknisPdfGenerator';
 import { TunasKelapaLogo, WosmLogo } from './PramukaEmblems';
 import { IdCardsShowcase } from './IdCardsShowcase';
 
@@ -260,6 +261,36 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
                 <Users className="w-4 h-4 shrink-0" />
                 <span>Gabung WA Group Pesta Penggalang</span>
               </a>
+            </div>
+
+            {/* Link Download Juknis Pesta Penggalang Tahun 2026 */}
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 bg-white/90 p-4 rounded-2xl border border-[#BBF7D0]">
+              <div className="space-y-1 min-w-0">
+                <p className="text-xs sm:text-sm font-bold text-[#4A2C11] flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-[#C81E1E] shrink-0" />
+                  <span>Petunjuk Teknis (Juknis) Pesta Penggalang Tahun 2026</span>
+                </p>
+                <p className="text-xs sm:text-sm text-[#166534]">
+                  Unduh dokumen resmi Juknis Pesta Penggalang Tingkat SMP/MTs Kecamatan Muara Kaman
+                  Tahun 2026 (32 Halaman):{' '}
+                  <button
+                    type="button"
+                    onClick={downloadOfficialJuknis2026Pdf}
+                    className="font-bold text-[#C81E1E] underline hover:text-[#991B1B] cursor-pointer"
+                  >
+                    Download Juknis Pesta Penggalang Tahun 2026 (.PDF)
+                  </button>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={downloadOfficialJuknis2026Pdf}
+                className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#4A2C11] hover:bg-[#361F0B] text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shrink-0 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4 shrink-0" />
+                <span>Download Juknis Pesta Penggalang Tahun 2026</span>
+              </button>
             </div>
           </div>
 
