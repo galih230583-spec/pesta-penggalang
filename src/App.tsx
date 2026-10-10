@@ -61,20 +61,9 @@ export default function App() {
   // Always start with a completely blank form on every link open / account
   const [formData, setFormData] = useState<RegistrationFormData>(() => createEmptyForm());
 
-  const [submissions, setSubmissions] = useState<SubmittedRegistration[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SUBMISSIONS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed.filter((item) => item && item.id !== 'reg-1791548760281');
-        }
-      }
-    } catch {
-      // Ignore storage error
-    }
-    return [];
-  });
+  const [submissions, setSubmissions] = useState<SubmittedRegistration[]>([]);
+  const pendingSubmissionIdsRef = useRef<Set<string>>(new Set());
+  const deletedSubmissionIdsRef = useRef<Set<string>>(new Set());
 
   const [activeView, setActiveView] = useState<'form' | 'success' | 'history' | 'admin'>('form');
   const [currentReceipt, setCurrentReceipt] = useState<SubmittedRegistration | null>(null);
@@ -108,64 +97,72 @@ export default function App() {
       // Ignore storage errors
     }
 
-    // Also load any server fallback registrations
-    fetch('/api/registrations')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && Array.isArray(data.registrations)) {
-          setSubmissions((prev) => {
-            const map = new Map<string, SubmittedRegistration>();
-            data.registrations.forEach((item: SubmittedRegistration) => map.set(item.id, item));
-            prev.forEach((item) => {
-              if (!map.has(item.id)) map.set(item.id, item);
-            });
-            return Array.from(map.values());
-          });
-        }
-      })
-      .catch(() => {});
-
-    // Real-time listener to Firestore so every school registered from any account/device appears in Admin
+    // Real-time listener to Firestore so every school registered or deleted from any account/device syncs everywhere
     const unsubscribe = subscribeToAllRegistrations((cloudRegistrations) => {
-      const cloudIds = new Set(cloudRegistrations.map((r) => r.id));
+      const validCloud = cloudRegistrations.filter(
+        (r) => r && r.id && r.id !== 'reg-1791548760281' && !deletedSubmissionIdsRef.current.has(r.id)
+      );
+      const cloudIds = new Set(validCloud.map((r) => r.id));
 
-      // Backfill any local-only registration that hasn't been uploaded to Firestore yet
+      // Clear pending flag for any registration that has now arrived in Firestore
+      cloudIds.forEach((id) => {
+        pendingSubmissionIdsRef.current.delete(id);
+      });
+
+      // One-time migration for any legacy local-only registration that was never uploaded to Firestore
       try {
         const syncedRaw = localStorage.getItem(STORAGE_KEY_SYNCED_IDS);
         const syncedSet = new Set<string>(syncedRaw ? JSON.parse(syncedRaw) : []);
         const localSaved = localStorage.getItem(STORAGE_KEY_SUBMISSIONS);
         const localList: SubmittedRegistration[] = localSaved ? JSON.parse(localSaved) : [];
 
-        // Remove old demo/test entry if present in localStorage
         const filteredLocal = localList.filter(
-          (item) => item && item.id && item.id !== 'reg-1791548760281'
+          (item) =>
+            item &&
+            item.id &&
+            item.id !== 'reg-1791548760281' &&
+            !deletedSubmissionIdsRef.current.has(item.id)
         );
 
         filteredLocal.forEach((localItem) => {
           if (!cloudIds.has(localItem.id) && !syncedSet.has(localItem.id)) {
             syncedSet.add(localItem.id);
-            saveRegistrationToFirestore(localItem).catch(() => {});
+            pendingSubmissionIdsRef.current.add(localItem.id);
+            saveRegistrationToFirestore(localItem)
+              .catch(() => {})
+              .finally(() => {
+                pendingSubmissionIdsRef.current.delete(localItem.id);
+              });
           }
         });
-        cloudRegistrations.forEach((c) => syncedSet.add(c.id));
+        validCloud.forEach((c) => syncedSet.add(c.id));
         localStorage.setItem(STORAGE_KEY_SYNCED_IDS, JSON.stringify(Array.from(syncedSet)));
       } catch {
         // Ignore storage errors
       }
 
+      // Authoritative state from Firestore (+ any in-flight newly submitted item on this device)
       setSubmissions((prev) => {
         const map = new Map<string, SubmittedRegistration>();
-        cloudRegistrations
-          .filter((r) => r.id !== 'reg-1791548760281')
-          .forEach((item) => map.set(item.id, item));
-        prev
-          .filter((r) => r && r.id && r.id !== 'reg-1791548760281')
-          .forEach((item) => {
-            if (!map.has(item.id)) {
-              map.set(item.id, item);
-            }
-          });
-        return Array.from(map.values());
+        validCloud.forEach((item) => map.set(item.id, item));
+        prev.forEach((item) => {
+          if (
+            item &&
+            item.id &&
+            !map.has(item.id) &&
+            pendingSubmissionIdsRef.current.has(item.id) &&
+            !deletedSubmissionIdsRef.current.has(item.id)
+          ) {
+            map.set(item.id, item);
+          }
+        });
+        const nextList = Array.from(map.values());
+        try {
+          localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(nextList));
+        } catch {
+          // Ignore quota errors
+        }
+        return nextList;
       });
     });
 
@@ -173,15 +170,6 @@ export default function App() {
       unsubscribe();
     };
   }, []);
-
-  // Save submissions to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(submissions));
-    } catch {
-      // Ignore quota errors
-    }
-  }, [submissions]);
 
   // Field handlers
   const handleInputChange = (
@@ -471,7 +459,17 @@ export default function App() {
   };
 
   const handleDeleteSubmission = (id: string) => {
-    setSubmissions((prev) => prev.filter((item) => item.id !== id));
+    deletedSubmissionIdsRef.current.add(id);
+    pendingSubmissionIdsRef.current.delete(id);
+    setSubmissions((prev) => {
+      const next = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(next));
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
     deleteRegistrationFromFirestore(id).catch(() => {});
     fetch(`/api/registrations/${encodeURIComponent(id)}`, {
       method: 'DELETE',
@@ -700,8 +698,30 @@ export default function App() {
       statusVerifikasi: 'Menunggu Verifikasi',
     };
 
-    setSubmissions((prev) => [newSubmission, ...prev.filter((i) => i.id !== newSubmission.id)]);
-    saveRegistrationToFirestore(newSubmission).catch(() => {});
+    pendingSubmissionIdsRef.current.add(newSubmission.id);
+    try {
+      const syncedRaw = localStorage.getItem(STORAGE_KEY_SYNCED_IDS);
+      const syncedSet = new Set<string>(syncedRaw ? JSON.parse(syncedRaw) : []);
+      syncedSet.add(newSubmission.id);
+      localStorage.setItem(STORAGE_KEY_SYNCED_IDS, JSON.stringify(Array.from(syncedSet)));
+    } catch {
+      // Ignore storage error
+    }
+
+    setSubmissions((prev) => {
+      const next = [newSubmission, ...prev.filter((i) => i.id !== newSubmission.id)];
+      try {
+        localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(next));
+      } catch {
+        // Ignore storage error
+      }
+      return next;
+    });
+    saveRegistrationToFirestore(newSubmission)
+      .catch(() => {})
+      .finally(() => {
+        pendingSubmissionIdsRef.current.delete(newSubmission.id);
+      });
     fetch('/api/registrations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
