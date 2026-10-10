@@ -37,6 +37,7 @@ export interface SubmittedRegistration extends RegistrationFormData {
   tanggalDaftar: string;
   totalBiaya: number;
   statusVerifikasi?: 'Menunggu Verifikasi' | 'Terverifikasi';
+  tanggalDihapus?: string;
 }
 
 export const BIAYA_PER_REGU = 1300000;

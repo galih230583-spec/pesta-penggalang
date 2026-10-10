@@ -16,6 +16,9 @@ import {
   Printer,
   IdCard,
   Check,
+  RotateCcw,
+  History,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   SubmittedRegistration,
@@ -29,9 +32,13 @@ import {
 
 interface AdminDashboardViewProps {
   submissions: SubmittedRegistration[];
+  deletedSubmissions: SubmittedRegistration[];
   onViewReceipt: (reg: SubmittedRegistration, initialTab?: 'receipt' | 'cards') => void;
   onToggleVerify: (id: string) => void;
   onDeleteSubmission: (id: string) => void;
+  onRestoreSubmission: (id: string) => void;
+  onPermanentDeleteSubmission: (id: string) => void;
+  onEmptyTrash: () => void;
   onBackToForm: () => void;
 }
 
@@ -40,9 +47,13 @@ const ADMIN_PIN = 'pramuka2026';
 
 export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   submissions,
+  deletedSubmissions,
   onViewReceipt,
   onToggleVerify,
   onDeleteSubmission,
+  onRestoreSubmission,
+  onPermanentDeleteSubmission,
+  onEmptyTrash,
   onBackToForm,
 }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -53,8 +64,10 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'pending'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'verified' | 'pending' | 'deleted'>('all');
   const [recapPrintedNotice, setRecapPrintedNotice] = useState(false);
+  const [confirmPermanentId, setConfirmPermanentId] = useState<string | null>(null);
+  const [confirmEmptyAll, setConfirmEmptyAll] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -296,6 +309,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
     return true;
   });
 
+  // FILTERED DELETED SUBMISSIONS (RIWAYAT HAPUS)
+  const filteredDeletedSubmissions = deletedSubmissions.filter((item) => {
+    return (
+      item.namaSekolah.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.namaKepalaSekolah.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.nomorRegistrasi.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
   const totalRegu = submissions.reduce((acc, s) => acc + (s.jumlahRegu || 2), 0);
   const totalDana = submissions.reduce((acc, s) => acc + (s.totalBiaya || 0), 0);
   const totalVerified = submissions.filter(
@@ -377,12 +399,12 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             <Building2 className="w-6 h-6 text-[#4A2C11]" />
           </div>
           <div>
-            <p className="text-xs text-[#6B5744]">Total Sekolah Pendaftar</p>
+            <p className="text-xs text-[#6B5744]">Total Sekolah Pendaftar Aktif</p>
             <p className="text-2xl font-mono-num font-bold text-[#23170D]">
               {submissions.length} Sekolah
             </p>
             <p className="text-xs text-[#15803D] font-medium">
-              {totalVerified} Terverifikasi Lunas
+              {totalVerified} Terverifikasi Lunas · {deletedSubmissions.length} di Riwayat Hapus
             </p>
           </div>
         </div>
@@ -419,7 +441,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
       </div>
 
       {/* Bar Pencarian & Filter */}
-      <div className="bg-white rounded-3xl border border-[#E5DEC9] p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 no-print">
+      <div className="bg-white rounded-3xl border border-[#E5DEC9] p-4 sm:p-5 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 no-print">
         <div className="relative flex-1">
           <Search className="w-5 h-5 text-[#8C735B] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
@@ -431,7 +453,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-[#FAF7F2] rounded-xl border border-[#E5DEC9]">
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#FAF7F2] rounded-xl border border-[#E5DEC9]">
           <button
             type="button"
             onClick={() => setFilterStatus('all')}
@@ -459,181 +481,422 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             onClick={() => setFilterStatus('pending')}
             className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap ${
               filterStatus === 'pending'
-                ? 'bg-[#C81E1E] text-white shadow-2xs'
+                ? 'bg-[#B45309] text-white shadow-2xs'
                 : 'text-[#6B5744] hover:text-[#23170D]'
             }`}
           >
             Menunggu ({submissions.length - totalVerified})
           </button>
+          <button
+            type="button"
+            onClick={() => setFilterStatus('deleted')}
+            className={`min-h-[40px] px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              filterStatus === 'deleted'
+                ? 'bg-[#991B1B] text-white shadow-2xs'
+                : 'text-[#991B1B] hover:bg-red-50'
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            <span>Riwayat Hapus ({deletedSubmissions.length})</span>
+          </button>
         </div>
       </div>
 
-      {/* Daftar Pendaftar */}
-      {filteredSubmissions.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-[#E5DEC9] p-10 text-center space-y-3">
-          <p className="text-base font-bold text-[#23170D]">
-            Belum ada data pendaftaran yang sesuai pencarian.
-          </p>
-          <p className="text-sm text-[#6B5744]">
-            Setiap kali peserta mengirim formulir pendaftaran, datanya akan otomatis muncul di
-            halaman Admin ini.
-          </p>
+      {/* MODE TAMPILAN: RIWAYAT HAPUS SEKOLAH (RECYCLE BIN) */}
+      {filterStatus === 'deleted' ? (
+        <div className="space-y-4">
+          <div className="bg-[#FFFBEB] rounded-3xl border border-[#FDE68A] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#92400E]">
+                <History className="w-4 h-4 shrink-0" />
+                <span>Riwayat Hapus Data Sekolah Pendaftar ({deletedSubmissions.length} Data)</span>
+              </div>
+              <p className="text-xs sm:text-sm text-[#78350F] leading-relaxed">
+                Data sekolah di bawah ini telah dihapus dari daftar aktif. Anda dapat menekan{' '}
+                <strong>Kembalikan Data</strong> sewaktu-waktu diperlukan agar kembali ke daftar
+                pendaftar aktif, atau menekan <strong>Hapus Permanen</strong> untuk menghapus
+                selamanya.
+              </p>
+            </div>
+
+            {deletedSubmissions.length > 0 && (
+              <div className="shrink-0">
+                {confirmEmptyAll ? (
+                  <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-red-300">
+                    <span className="text-xs font-bold text-red-800 px-1">
+                      Hapus permanen semua ({deletedSubmissions.length})?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onEmptyTrash();
+                        setConfirmEmptyAll(false);
+                      }}
+                      className="min-h-[36px] px-3 py-1.5 rounded-lg bg-[#991B1B] hover:bg-[#7F1D1D] text-white font-bold text-xs cursor-pointer"
+                    >
+                      Ya, Kosongkan
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmEmptyAll(false)}
+                      className="min-h-[36px] px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmEmptyAll(true)}
+                    className="min-h-[44px] px-4 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-[#991B1B] border border-red-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Kosongkan Semua Riwayat Hapus</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {filteredDeletedSubmissions.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-[#E5DEC9] p-10 text-center space-y-3">
+              <p className="text-base font-bold text-[#23170D]">
+                Riwayat Hapus Kosong
+              </p>
+              <p className="text-sm text-[#6B5744]">
+                Belum ada data sekolah pendaftar yang dihapus, atau tidak ada yang cocok dengan kata
+                kunci pencarian.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredDeletedSubmissions.map((item) => {
+                const isConfirmingThis = confirmPermanentId === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-3xl border-2 border-red-200/80 p-5 sm:p-6 space-y-4"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E5DEC9]">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-mono-num text-[#6B5744]">
+                          <span className="font-bold text-[#991B1B]">{item.nomorRegistrasi}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>Daftar: {item.tanggalDaftar}</span>
+                          {item.tanggalDihapus && (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span className="font-sans font-semibold text-[#991B1B]">
+                                Dihapus: {item.tanggalDihapus}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-bold text-[#23170D]">
+                          {item.namaSekolah}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[#5C4328]">
+                          Kepala Sekolah: <strong>{item.namaKepalaSekolah}</strong> (NIP:{' '}
+                          <span className="font-mono-num">{item.nipKepalaSekolah}</span>)
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 no-print">
+                        <button
+                          type="button"
+                          onClick={() => onRestoreSubmission(item.id)}
+                          className="min-h-[44px] px-4 py-2 rounded-xl bg-[#15803D] hover:bg-[#14532D] text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <RotateCcw className="w-4 h-4" />
+                          <span>Kembalikan Data Sekolah</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onViewReceipt(item, 'receipt')}
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Lihat Detail</span>
+                        </button>
+
+                        {isConfirmingThis ? (
+                          <div className="flex items-center gap-1.5 bg-red-50 p-1.5 rounded-xl border border-red-300">
+                            <AlertTriangle className="w-4 h-4 text-red-700 ml-1 shrink-0" />
+                            <span className="text-xs font-bold text-red-800">Hapus selamanya?</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onPermanentDeleteSubmission(item.id);
+                                setConfirmPermanentId(null);
+                              }}
+                              className="min-h-[34px] px-2.5 py-1 rounded-lg bg-[#991B1B] hover:bg-[#7F1D1D] text-white font-bold text-xs cursor-pointer"
+                            >
+                              Ya, Hapus Permanen
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmPermanentId(null)}
+                              className="min-h-[34px] px-2.5 py-1 rounded-lg bg-white hover:bg-gray-100 text-gray-700 border border-gray-300 font-semibold text-xs cursor-pointer"
+                            >
+                              Batal
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmPermanentId(item.id)}
+                            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-[#991B1B] border border-red-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span>Hapus Permanen</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Ringkasan Pembina & Peserta */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
+                      <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 space-y-1">
+                        <p className="font-bold text-[#8B1E1E] text-xs">
+                          Pembina Pendamping Putra (2 Orang)
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          1. {item.namaPembinaPutra}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutra})
+                          </span>
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          2. {item.namaPembinaPutra2 || '-'}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutra2 || '-'})
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 space-y-1">
+                        <p className="font-bold text-[#4B1E78] text-xs">
+                          Pembina Pendamping Putri (2 Orang)
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          1. {item.namaPembinaPutri}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutri})
+                          </span>
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          2. {item.namaPembinaPutri2 || '-'}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutri2 || '-'})
+                          </span>
+                        </p>
+                      </div>
+
+                      <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 flex flex-col justify-between">
+                        <div>
+                          <p className="font-bold text-[#14532D] text-xs">
+                            Pembayaran & Peserta
+                          </p>
+                          <p className="font-mono-num font-bold text-[#C81E1E] text-base mt-0.5">
+                            {formatRupiah(item.totalBiaya)} ({item.jumlahRegu} Regu)
+                          </p>
+                        </div>
+                        <p className="text-xs text-[#6B5744]">
+                          Putra: {item.pesertaPutra.filter(Boolean).length} org · Putri:{' '}
+                          {item.pesertaPutri.filter(Boolean).length} org
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {filteredSubmissions.map((item) => {
-            const isVerified = item.statusVerifikasi === 'Terverifikasi';
-            return (
-              <div
-                key={item.id}
-                className="bg-white rounded-3xl border border-[#E5DEC9] p-5 sm:p-6 space-y-4"
-              >
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E5DEC9]">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2 text-xs font-mono-num text-[#6B5744]">
-                      <span className="font-bold text-[#4A2C11]">{item.nomorRegistrasi}</span>
-                      <span aria-hidden="true">·</span>
-                      <span>{item.tanggalDaftar}</span>
-                      <span aria-hidden="true">·</span>
-                      <span
-                        className={`inline-flex items-center gap-1 font-sans font-bold ${
-                          isVerified ? 'text-[#15803D]' : 'text-[#B45309]'
-                        }`}
-                      >
-                        {isVerified ? (
-                          <>
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Terverifikasi Lunas</span>
-                          </>
-                        ) : (
-                          <>
-                            <Clock className="w-3.5 h-3.5" />
-                            <span>Menunggu Verifikasi</span>
-                          </>
+        /* MODE TAMPILAN: DAFTAR PENDAFTAR AKTIF */
+        <>
+          {filteredSubmissions.length === 0 ? (
+            <div className="bg-white rounded-3xl border border-[#E5DEC9] p-10 text-center space-y-3">
+              <p className="text-base font-bold text-[#23170D]">
+                Belum ada data pendaftaran aktif yang sesuai pencarian.
+              </p>
+              <p className="text-sm text-[#6B5744]">
+                Setiap kali peserta mengirim formulir pendaftaran, datanya akan otomatis muncul di
+                halaman Admin ini.{' '}
+                {deletedSubmissions.length > 0 && (
+                  <span>
+                    Terdapat <strong>{deletedSubmissions.length} sekolah</strong> di tab{' '}
+                    <button
+                      type="button"
+                      onClick={() => setFilterStatus('deleted')}
+                      className="text-[#991B1B] font-bold underline cursor-pointer"
+                    >
+                      Riwayat Hapus
+                    </button>{' '}
+                    yang dapat dikembalikan kapan saja.
+                  </span>
+                )}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredSubmissions.map((item) => {
+                const isVerified = item.statusVerifikasi === 'Terverifikasi';
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white rounded-3xl border border-[#E5DEC9] p-5 sm:p-6 space-y-4"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#E5DEC9]">
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2 text-xs font-mono-num text-[#6B5744]">
+                          <span className="font-bold text-[#4A2C11]">{item.nomorRegistrasi}</span>
+                          <span aria-hidden="true">·</span>
+                          <span>{item.tanggalDaftar}</span>
+                          <span aria-hidden="true">·</span>
+                          <span
+                            className={`inline-flex items-center gap-1 font-sans font-bold ${
+                              isVerified ? 'text-[#15803D]' : 'text-[#B45309]'
+                            }`}
+                          >
+                            {isVerified ? (
+                              <>
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Terverifikasi Lunas</span>
+                              </>
+                            ) : (
+                              <>
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Menunggu Verifikasi</span>
+                              </>
+                            )}
+                          </span>
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-bold text-[#23170D]">
+                          {item.namaSekolah}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[#5C4328]">
+                          Kepala Sekolah: <strong>{item.namaKepalaSekolah}</strong> (NIP:{' '}
+                          <span className="font-mono-num">{item.nipKepalaSekolah}</span>)
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 no-print">
+                        <button
+                          type="button"
+                          onClick={() => onToggleVerify(item.id)}
+                          className={`min-h-[44px] px-3.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+                            isVerified
+                              ? 'bg-[#FAF7F2] text-[#4A2C11] border border-[#D8CEBE]'
+                              : 'bg-[#15803D] hover:bg-[#14532D] text-white'
+                          }`}
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>{isVerified ? 'Batalkan Verifikasi' : 'Verifikasi Lunas'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onViewReceipt(item, 'receipt')}
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#4A2C11] hover:bg-[#361F0B] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Bukti Daftar</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => onViewReceipt(item, 'cards')}
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#C81E1E] hover:bg-[#A51717] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <IdCard className="w-4 h-4" />
+                          <span>Kartu Peserta (20)</span>
+                        </button>
+
+                        {item.buktiPembayaran && (
+                          <button
+                            type="button"
+                            onClick={() => downloadPaymentProofFile(item)}
+                            className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8DC] text-[#14532D] border border-[#D8CEBE] font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Unduh Bukti Bayar</span>
+                          </button>
                         )}
-                      </span>
+
+                        <button
+                          type="button"
+                          onClick={() => onDeleteSubmission(item.id)}
+                          className="min-h-[44px] px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-[#991B1B] border border-red-200 font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                          title="Pindahkan ke Riwayat Hapus"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
                     </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-[#23170D]">
-                      {item.namaSekolah}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-[#5C4328]">
-                      Kepala Sekolah: <strong>{item.namaKepalaSekolah}</strong> (NIP:{' '}
-                      <span className="font-mono-num">{item.nipKepalaSekolah}</span>)
-                    </p>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 no-print">
-                    <button
-                      type="button"
-                      onClick={() => onToggleVerify(item.id)}
-                      className={`min-h-[44px] px-3.5 py-2 rounded-xl font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
-                        isVerified
-                          ? 'bg-[#FAF7F2] text-[#4A2C11] border border-[#D8CEBE]'
-                          : 'bg-[#15803D] hover:bg-[#14532D] text-white'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>{isVerified ? 'Batalkan Verifikasi' : 'Verifikasi Lunas'}</span>
-                    </button>
+                    {/* Ringkasan Pembina Putra 1 & 2, Pembina Putri 1 & 2, serta Biaya */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
+                      <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 space-y-1">
+                        <p className="font-bold text-[#8B1E1E] text-xs">
+                          Pembina Pendamping Putra (2 Orang)
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          1. {item.namaPembinaPutra}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutra})
+                          </span>
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          2. {item.namaPembinaPutra2 || '-'}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutra2 || '-'})
+                          </span>
+                        </p>
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => onViewReceipt(item, 'receipt')}
-                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#4A2C11] hover:bg-[#361F0B] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Bukti Daftar</span>
-                    </button>
+                      <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 space-y-1">
+                        <p className="font-bold text-[#4B1E78] text-xs">
+                          Pembina Pendamping Putri (2 Orang)
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          1. {item.namaPembinaPutri}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutri})
+                          </span>
+                        </p>
+                        <p className="font-semibold text-[#23170D]">
+                          2. {item.namaPembinaPutri2 || '-'}{' '}
+                          <span className="font-mono-num text-xs text-[#6B5744]">
+                            (NIP: {item.nipPembinaPutri2 || '-'})
+                          </span>
+                        </p>
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => onViewReceipt(item, 'cards')}
-                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#C81E1E] hover:bg-[#A51717] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <IdCard className="w-4 h-4" />
-                      <span>Kartu Peserta (20)</span>
-                    </button>
-
-                    {item.buktiPembayaran && (
-                      <button
-                        type="button"
-                        onClick={() => downloadPaymentProofFile(item)}
-                        className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8DC] text-[#14532D] border border-[#D8CEBE] font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Unduh Bukti Bayar</span>
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => onDeleteSubmission(item.id)}
-                      className="min-h-[44px] px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-[#991B1B] border border-red-200 font-semibold text-xs flex items-center gap-1 cursor-pointer"
-                      title="Hapus Data"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Hapus</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Ringkasan Pembina Putra 1 & 2, Pembina Putri 1 & 2, serta Biaya */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
-                  <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 space-y-1">
-                    <p className="font-bold text-[#8B1E1E] text-xs">
-                      Pembina Pendamping Putra (2 Orang)
-                    </p>
-                    <p className="font-semibold text-[#23170D]">
-                      1. {item.namaPembinaPutra}{' '}
-                      <span className="font-mono-num text-xs text-[#6B5744]">
-                        (NIP: {item.nipPembinaPutra})
-                      </span>
-                    </p>
-                    <p className="font-semibold text-[#23170D]">
-                      2. {item.namaPembinaPutra2 || '-'}{' '}
-                      <span className="font-mono-num text-xs text-[#6B5744]">
-                        (NIP: {item.nipPembinaPutra2 || '-'})
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 space-y-1">
-                    <p className="font-bold text-[#4B1E78] text-xs">
-                      Pembina Pendamping Putri (2 Orang)
-                    </p>
-                    <p className="font-semibold text-[#23170D]">
-                      1. {item.namaPembinaPutri}{' '}
-                      <span className="font-mono-num text-xs text-[#6B5744]">
-                        (NIP: {item.nipPembinaPutri})
-                      </span>
-                    </p>
-                    <p className="font-semibold text-[#23170D]">
-                      2. {item.namaPembinaPutri2 || '-'}{' '}
-                      <span className="font-mono-num text-xs text-[#6B5744]">
-                        (NIP: {item.nipPembinaPutri2 || '-'})
-                      </span>
-                    </p>
-                  </div>
-
-                  <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 flex flex-col justify-between">
-                    <div>
-                      <p className="font-bold text-[#14532D] text-xs">
-                        Pembayaran & Peserta
-                      </p>
-                      <p className="font-mono-num font-bold text-[#C81E1E] text-base mt-0.5">
-                        {formatRupiah(item.totalBiaya)} ({item.jumlahRegu} Regu)
-                      </p>
+                      <div className="bg-[#FAF7F2] p-3.5 rounded-2xl border border-[#E5DEC9]/80 flex flex-col justify-between">
+                        <div>
+                          <p className="font-bold text-[#14532D] text-xs">
+                            Pembayaran & Peserta
+                          </p>
+                          <p className="font-mono-num font-bold text-[#C81E1E] text-base mt-0.5">
+                            {formatRupiah(item.totalBiaya)} ({item.jumlahRegu} Regu)
+                          </p>
+                        </div>
+                        <p className="text-xs text-[#6B5744]">
+                          Putra: {item.pesertaPutra.filter(Boolean).length} org · Putri:{' '}
+                          {item.pesertaPutri.filter(Boolean).length} org
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-xs text-[#6B5744]">
-                      Putra: {item.pesertaPutra.filter(Boolean).length} org · Putri:{' '}
-                      {item.pesertaPutri.filter(Boolean).length} org
-                    </p>
                   </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

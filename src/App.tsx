@@ -37,12 +37,16 @@ import { SubmissionSuccessView } from './components/SubmissionSuccessView';
 import { AdminDashboardView } from './components/AdminDashboardView';
 import {
   subscribeToAllRegistrations,
+  subscribeToDeletedRegistrations,
   saveRegistrationToFirestore,
   updateRegistrationVerificationInFirestore,
-  deleteRegistrationFromFirestore,
+  moveRegistrationToTrashInFirestore,
+  restoreRegistrationFromTrashInFirestore,
+  permanentlyDeleteFromTrashInFirestore,
 } from './firebase';
 
 const STORAGE_KEY_SUBMISSIONS = 'pramuka_muara_kaman_submissions_v2';
+const STORAGE_KEY_DELETED_SUBMISSIONS = 'pramuka_muara_kaman_deleted_submissions_v1';
 const STORAGE_KEY_SYNCED_IDS = 'pramuka_muara_kaman_firestore_synced_v2';
 
 function createEmptyForm(): RegistrationFormData {
@@ -62,8 +66,23 @@ export default function App() {
   const [formData, setFormData] = useState<RegistrationFormData>(() => createEmptyForm());
 
   const [submissions, setSubmissions] = useState<SubmittedRegistration[]>([]);
+  const [deletedSubmissions, setDeletedSubmissions] = useState<SubmittedRegistration[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_DELETED_SUBMISSIONS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item) => item && item.id);
+        }
+      }
+    } catch {
+      // Ignore storage error
+    }
+    return [];
+  });
   const pendingSubmissionIdsRef = useRef<Set<string>>(new Set());
   const deletedSubmissionIdsRef = useRef<Set<string>>(new Set());
+  const permanentlyDeletedIdsRef = useRef<Set<string>>(new Set());
 
   const [activeView, setActiveView] = useState<'form' | 'success' | 'history' | 'admin'>('form');
   const [currentReceipt, setCurrentReceipt] = useState<SubmittedRegistration | null>(null);
@@ -166,8 +185,28 @@ export default function App() {
       });
     });
 
+    const unsubscribeDeleted = subscribeToDeletedRegistrations((cloudDeleted) => {
+      const validDeleted = cloudDeleted.filter(
+        (r) =>
+          r &&
+          r.id &&
+          r.id !== 'reg-1791548760281' &&
+          !permanentlyDeletedIdsRef.current.has(r.id)
+      );
+      validDeleted.forEach((item) => {
+        deletedSubmissionIdsRef.current.add(item.id);
+      });
+      setDeletedSubmissions(validDeleted);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_SUBMISSIONS, JSON.stringify(validDeleted));
+      } catch {
+        // Ignore quota errors
+      }
+    });
+
     return () => {
       unsubscribe();
+      unsubscribeDeleted();
     };
   }, []);
 
@@ -459,8 +498,18 @@ export default function App() {
   };
 
   const handleDeleteSubmission = (id: string) => {
+    const target = submissions.find((item) => item.id === id);
+    const deletedTimestamp = new Date().toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     deletedSubmissionIdsRef.current.add(id);
     pendingSubmissionIdsRef.current.delete(id);
+
     setSubmissions((prev) => {
       const next = prev.filter((item) => item.id !== id);
       try {
@@ -470,10 +519,102 @@ export default function App() {
       }
       return next;
     });
-    deleteRegistrationFromFirestore(id).catch(() => {});
+
+    if (target) {
+      const deletedItem: SubmittedRegistration = {
+        ...target,
+        tanggalDihapus: deletedTimestamp,
+      };
+      setDeletedSubmissions((prev) => {
+        const nextDeleted = [deletedItem, ...prev.filter((item) => item.id !== id)];
+        try {
+          localStorage.setItem(STORAGE_KEY_DELETED_SUBMISSIONS, JSON.stringify(nextDeleted));
+        } catch {
+          // Ignore storage errors
+        }
+        return nextDeleted;
+      });
+      moveRegistrationToTrashInFirestore(deletedItem).catch(() => {});
+    }
+
     fetch(`/api/registrations/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }).catch(() => {});
+  };
+
+  const handleRestoreSubmission = (id: string) => {
+    const target = deletedSubmissions.find((item) => item.id === id);
+    if (!target) return;
+
+    deletedSubmissionIdsRef.current.delete(id);
+    pendingSubmissionIdsRef.current.add(id);
+
+    const restoredItem: SubmittedRegistration = {
+      ...target,
+      tanggalDihapus: undefined,
+    };
+
+    setDeletedSubmissions((prev) => {
+      const nextDeleted = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_SUBMISSIONS, JSON.stringify(nextDeleted));
+      } catch {
+        // Ignore storage errors
+      }
+      return nextDeleted;
+    });
+
+    setSubmissions((prev) => {
+      const next = [restoredItem, ...prev.filter((item) => item.id !== id)];
+      try {
+        localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(next));
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+
+    restoreRegistrationFromTrashInFirestore(restoredItem)
+      .catch(() => {})
+      .finally(() => {
+        pendingSubmissionIdsRef.current.delete(id);
+      });
+
+    fetch('/api/registrations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(restoredItem),
+    }).catch(() => {});
+  };
+
+  const handlePermanentDeleteSubmission = (id: string) => {
+    permanentlyDeletedIdsRef.current.add(id);
+    deletedSubmissionIdsRef.current.add(id);
+    setDeletedSubmissions((prev) => {
+      const nextDeleted = prev.filter((item) => item.id !== id);
+      try {
+        localStorage.setItem(STORAGE_KEY_DELETED_SUBMISSIONS, JSON.stringify(nextDeleted));
+      } catch {
+        // Ignore storage errors
+      }
+      return nextDeleted;
+    });
+    permanentlyDeleteFromTrashInFirestore(id).catch(() => {});
+  };
+
+  const handleEmptyTrash = () => {
+    const idsToDelete = deletedSubmissions.map((item) => item.id);
+    idsToDelete.forEach((id) => {
+      permanentlyDeletedIdsRef.current.add(id);
+      deletedSubmissionIdsRef.current.add(id);
+      permanentlyDeleteFromTrashInFirestore(id).catch(() => {});
+    });
+    setDeletedSubmissions([]);
+    try {
+      localStorage.setItem(STORAGE_KEY_DELETED_SUBMISSIONS, JSON.stringify([]));
+    } catch {
+      // Ignore storage errors
+    }
   };
 
   // Check valid participants (name + tempat lahir + tanggal lahir valid <= 16 years on 30 Oct)
@@ -905,6 +1046,7 @@ export default function App() {
         {activeView === 'admin' ? (
           <AdminDashboardView
             submissions={submissions}
+            deletedSubmissions={deletedSubmissions}
             onViewReceipt={(reg, initialTab = 'receipt') => {
               setCurrentReceipt(reg);
               setReceiptSubTab(initialTab);
@@ -913,6 +1055,9 @@ export default function App() {
             }}
             onToggleVerify={handleToggleVerify}
             onDeleteSubmission={handleDeleteSubmission}
+            onRestoreSubmission={handleRestoreSubmission}
+            onPermanentDeleteSubmission={handlePermanentDeleteSubmission}
+            onEmptyTrash={handleEmptyTrash}
             onBackToForm={() => {
               setActiveView('form');
               window.scrollTo({ top: 0, behavior: 'smooth' });

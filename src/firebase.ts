@@ -86,6 +86,7 @@ async function testConnection() {
 testConnection();
 
 const REGISTRATIONS_COLLECTION = 'registrations';
+const DELETED_REGISTRATIONS_COLLECTION = 'deleted_registrations';
 
 /**
  * Compresses large image dataUrls if needed so that the document always stays well under
@@ -286,6 +287,140 @@ export async function deleteRegistrationFromFirestore(id: string): Promise<void>
   }
 }
 
+export async function moveRegistrationToTrashInFirestore(reg: SubmittedRegistration): Promise<void> {
+  const rawId = String(reg.id || `reg-${Date.now()}`);
+  const safeId = rawId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128) || `reg-${Date.now()}`;
+  const trashPath = `${DELETED_REGISTRATIONS_COLLECTION}/${safeId}`;
+  const optimizedProof = await optimizePaymentProofForFirestore(reg.buktiPembayaran);
+
+  const rawJumlahRegu = Number(reg.jumlahRegu);
+  const safeJumlahRegu = Number.isFinite(rawJumlahRegu)
+    ? Math.min(Math.max(1, Math.round(rawJumlahRegu)), 10)
+    : 2;
+
+  const rawTotalBiaya = Number(reg.totalBiaya);
+  const safeTotalBiaya = Number.isFinite(rawTotalBiaya)
+    ? Math.min(Math.max(0, Math.round(rawTotalBiaya)), 100000000)
+    : 2600000;
+
+  const formattedDeletedAt = safeNonEmptyString(
+    reg.tanggalDihapus,
+    new Date().toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    100
+  );
+
+  const buildDeletedPayload = (proofValue: PaymentProofFile | null) => ({
+    id: safeId,
+    nomorRegistrasi: safeNonEmptyString(reg.nomorRegistrasi, 'PP-MK-2026-0000', 64),
+    tanggalDaftar: safeNonEmptyString(reg.tanggalDaftar, '-', 100),
+    tanggalDihapus: formattedDeletedAt,
+    namaSekolah: safeNonEmptyString(reg.namaSekolah, 'Sekolah Peserta', 200),
+    namaKepalaSekolah: safeNonEmptyString(reg.namaKepalaSekolah, '-', 200),
+    nipKepalaSekolah: safeNonEmptyString(reg.nipKepalaSekolah, '-', 64),
+    namaPembinaPutra: safeNonEmptyString(reg.namaPembinaPutra, '-', 200),
+    nipPembinaPutra: safeNonEmptyString(reg.nipPembinaPutra, '-', 64),
+    namaPembinaPutra2: String(reg.namaPembinaPutra2 ?? '').trim().slice(0, 200),
+    nipPembinaPutra2: String(reg.nipPembinaPutra2 ?? '').trim().slice(0, 64),
+    namaPembinaPutri: safeNonEmptyString(reg.namaPembinaPutri, '-', 200),
+    nipPembinaPutri: safeNonEmptyString(reg.nipPembinaPutri, '-', 64),
+    namaPembinaPutri2: String(reg.namaPembinaPutri2 ?? '').trim().slice(0, 200),
+    nipPembinaPutri2: String(reg.nipPembinaPutri2 ?? '').trim().slice(0, 64),
+    namaReguPutra: String(reg.namaReguPutra ?? '').trim().slice(0, 120),
+    namaReguPutri: String(reg.namaReguPutri ?? '').trim().slice(0, 120),
+    pesertaPutra: normalizeArray8(reg.pesertaPutra, 160),
+    tempatLahirPutra: normalizeArray8(reg.tempatLahirPutra, 120),
+    tanggalLahirPutra: normalizeArray8(reg.tanggalLahirPutra, 32),
+    pesertaPutri: normalizeArray8(reg.pesertaPutri, 160),
+    tempatLahirPutri: normalizeArray8(reg.tempatLahirPutri, 120),
+    tanggalLahirPutri: normalizeArray8(reg.tanggalLahirPutri, 32),
+    jumlahRegu: safeJumlahRegu,
+    totalBiaya: safeTotalBiaya,
+    statusVerifikasi:
+      reg.statusVerifikasi === 'Terverifikasi' ? 'Terverifikasi' : 'Menunggu Verifikasi',
+    pernyataanBenar: true,
+    buktiPembayaran: proofValue,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  try {
+    await setDoc(doc(db, DELETED_REGISTRATIONS_COLLECTION, safeId), buildDeletedPayload(optimizedProof));
+  } catch (firstError) {
+    try {
+      const compactProof: PaymentProofFile | null = optimizedProof
+        ? {
+            fileName: optimizedProof.fileName,
+            fileSize: optimizedProof.fileSize,
+            fileType: optimizedProof.fileType,
+            dataUrl: optimizedProof.dataUrl.slice(0, 250000),
+            uploadedAt: optimizedProof.uploadedAt,
+          }
+        : null;
+      await setDoc(doc(db, DELETED_REGISTRATIONS_COLLECTION, safeId), buildDeletedPayload(compactProof));
+    } catch (error) {
+      handleFirestoreError(error ?? firstError, OperationType.CREATE, trashPath);
+    }
+  }
+
+  await deleteRegistrationFromFirestore(safeId);
+}
+
+export async function restoreRegistrationFromTrashInFirestore(reg: SubmittedRegistration): Promise<void> {
+  const safeId = String(reg.id || '').replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
+  await saveRegistrationToFirestore(reg);
+  await permanentlyDeleteFromTrashInFirestore(safeId);
+}
+
+export async function permanentlyDeleteFromTrashInFirestore(id: string): Promise<void> {
+  const safeId = id.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 128);
+  const path = `${DELETED_REGISTRATIONS_COLLECTION}/${safeId}`;
+  try {
+    await deleteDoc(doc(db, DELETED_REGISTRATIONS_COLLECTION, safeId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+function mapDocToRegistration(docId: string, d: Record<string, any>): SubmittedRegistration {
+  return {
+    id: d.id || docId,
+    nomorRegistrasi: d.nomorRegistrasi || '',
+    tanggalDaftar: d.tanggalDaftar || '',
+    tanggalDihapus: d.tanggalDihapus || undefined,
+    namaSekolah: d.namaSekolah || '',
+    namaKepalaSekolah: d.namaKepalaSekolah || '',
+    nipKepalaSekolah: d.nipKepalaSekolah || '',
+    namaPembinaPutra: d.namaPembinaPutra || '',
+    nipPembinaPutra: d.nipPembinaPutra || '',
+    namaPembinaPutra2: d.namaPembinaPutra2 || '',
+    nipPembinaPutra2: d.nipPembinaPutra2 || '',
+    namaPembinaPutri: d.namaPembinaPutri || '',
+    nipPembinaPutri: d.nipPembinaPutri || '',
+    namaPembinaPutri2: d.namaPembinaPutri2 || '',
+    nipPembinaPutri2: d.nipPembinaPutri2 || '',
+    namaReguPutra: d.namaReguPutra || '',
+    namaReguPutri: d.namaReguPutri || '',
+    pesertaPutra: Array.isArray(d.pesertaPutra) ? d.pesertaPutra : Array(8).fill(''),
+    tempatLahirPutra: Array.isArray(d.tempatLahirPutra) ? d.tempatLahirPutra : Array(8).fill(''),
+    tanggalLahirPutra: Array.isArray(d.tanggalLahirPutra) ? d.tanggalLahirPutra : Array(8).fill(''),
+    pesertaPutri: Array.isArray(d.pesertaPutri) ? d.pesertaPutri : Array(8).fill(''),
+    tempatLahirPutri: Array.isArray(d.tempatLahirPutri) ? d.tempatLahirPutri : Array(8).fill(''),
+    tanggalLahirPutri: Array.isArray(d.tanggalLahirPutri) ? d.tanggalLahirPutri : Array(8).fill(''),
+    jumlahRegu: typeof d.jumlahRegu === 'number' ? d.jumlahRegu : 2,
+    totalBiaya: typeof d.totalBiaya === 'number' ? d.totalBiaya : 2600000,
+    statusVerifikasi:
+      d.statusVerifikasi === 'Terverifikasi' ? 'Terverifikasi' : 'Menunggu Verifikasi',
+    pernyataanBenar: Boolean(d.pernyataanBenar),
+    buktiPembayaran: d.buktiPembayaran || null,
+  };
+}
+
 export function subscribeToAllRegistrations(
   onData: (registrations: SubmittedRegistration[]) => void
 ): () => void {
@@ -306,51 +441,44 @@ export function subscribeToAllRegistrations(
           typeof bData.createdAt?.toMillis === 'function' ? bData.createdAt.toMillis() : Date.now();
         return bTime - aTime;
       });
-      const items: SubmittedRegistration[] = sortedDocs.map((docSnap) => {
-        const d = docSnap.data();
-        return {
-          id: d.id || docSnap.id,
-          nomorRegistrasi: d.nomorRegistrasi || '',
-          tanggalDaftar: d.tanggalDaftar || '',
-          namaSekolah: d.namaSekolah || '',
-          namaKepalaSekolah: d.namaKepalaSekolah || '',
-          nipKepalaSekolah: d.nipKepalaSekolah || '',
-          namaPembinaPutra: d.namaPembinaPutra || '',
-          nipPembinaPutra: d.nipPembinaPutra || '',
-          namaPembinaPutra2: d.namaPembinaPutra2 || '',
-          nipPembinaPutra2: d.nipPembinaPutra2 || '',
-          namaPembinaPutri: d.namaPembinaPutri || '',
-          nipPembinaPutri: d.nipPembinaPutri || '',
-          namaPembinaPutri2: d.namaPembinaPutri2 || '',
-          nipPembinaPutri2: d.nipPembinaPutri2 || '',
-          namaReguPutra: d.namaReguPutra || '',
-          namaReguPutri: d.namaReguPutri || '',
-          pesertaPutra: Array.isArray(d.pesertaPutra) ? d.pesertaPutra : Array(8).fill(''),
-          tempatLahirPutra: Array.isArray(d.tempatLahirPutra)
-            ? d.tempatLahirPutra
-            : Array(8).fill(''),
-          tanggalLahirPutra: Array.isArray(d.tanggalLahirPutra)
-            ? d.tanggalLahirPutra
-            : Array(8).fill(''),
-          pesertaPutri: Array.isArray(d.pesertaPutri) ? d.pesertaPutri : Array(8).fill(''),
-          tempatLahirPutri: Array.isArray(d.tempatLahirPutri)
-            ? d.tempatLahirPutri
-            : Array(8).fill(''),
-          tanggalLahirPutri: Array.isArray(d.tanggalLahirPutri)
-            ? d.tanggalLahirPutri
-            : Array(8).fill(''),
-          jumlahRegu: typeof d.jumlahRegu === 'number' ? d.jumlahRegu : 2,
-          totalBiaya: typeof d.totalBiaya === 'number' ? d.totalBiaya : 2600000,
-          statusVerifikasi:
-            d.statusVerifikasi === 'Terverifikasi' ? 'Terverifikasi' : 'Menunggu Verifikasi',
-          pernyataanBenar: Boolean(d.pernyataanBenar),
-          buktiPembayaran: d.buktiPembayaran || null,
-        };
-      });
+      const items: SubmittedRegistration[] = sortedDocs.map((docSnap) =>
+        mapDocToRegistration(docSnap.id, docSnap.data())
+      );
       onData(items);
     },
     (error) => {
       handleFirestoreError(error, OperationType.LIST, REGISTRATIONS_COLLECTION);
+    }
+  );
+}
+
+export function subscribeToDeletedRegistrations(
+  onData: (deletedRegistrations: SubmittedRegistration[]) => void
+): () => void {
+  const q = query(
+    collection(db, DELETED_REGISTRATIONS_COLLECTION),
+    where('pernyataanBenar', '==', true),
+    limit(500)
+  );
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const sortedDocs = [...snapshot.docs].sort((a, b) => {
+        const aData = a.data();
+        const bData = b.data();
+        const aTime =
+          typeof aData.updatedAt?.toMillis === 'function' ? aData.updatedAt.toMillis() : Date.now();
+        const bTime =
+          typeof bData.updatedAt?.toMillis === 'function' ? bData.updatedAt.toMillis() : Date.now();
+        return bTime - aTime;
+      });
+      const items: SubmittedRegistration[] = sortedDocs.map((docSnap) =>
+        mapDocToRegistration(docSnap.id, docSnap.data())
+      );
+      onData(items);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, DELETED_REGISTRATIONS_COLLECTION);
     }
   );
 }
