@@ -18,5 +18,44 @@ export function getDefaultSignature(): string {
  * Returns active signature URL.
  */
 export function getActiveSignature(): string {
-  return TTD_PENGGALANG_FALLBACK_BASE64;
+  return readCustomSignature() || TTD_PENGGALANG_FALLBACK_BASE64;
+}
+
+const CUSTOM_SIGNATURE_STORAGE_KEY = 'pramuka_custom_signature';
+
+function readCustomSignature(): string | null {
+  try {
+    return localStorage.getItem(CUSTOM_SIGNATURE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Saves a custom signature (DataURL) to localStorage.
+ */
+export function saveCustomSignature(data: string): void {
+  try {
+    localStorage.setItem(CUSTOM_SIGNATURE_STORAGE_KEY, data);
+  } catch (err) {
+    console.error('Gagal menyimpan tanda tangan kustom:', err);
+  }
+}
+
+/**
+ * Removes the custom signature, reverting to the default.
+ */
+export function resetCustomSignature(): void {
+  try {
+    localStorage.removeItem(CUSTOM_SIGNATURE_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Returns true if a custom signature has been saved.
+ */
+export function hasCustomSignature(): boolean {
+  return !!readCustomSignature();
 }
