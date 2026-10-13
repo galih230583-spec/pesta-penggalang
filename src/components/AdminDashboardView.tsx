@@ -19,6 +19,7 @@ import {
   RotateCcw,
   History,
   AlertTriangle,
+  Receipt,
 } from 'lucide-react';
 import {
   SubmittedRegistration,
@@ -29,11 +30,12 @@ import {
   downloadAdminRecapAsPdf,
   downloadPaymentProofFile,
 } from '../utils/downloadHelpers';
+import { KwitansiPramuka } from './KwitansiPramuka';
 
 interface AdminDashboardViewProps {
   submissions: SubmittedRegistration[];
   deletedSubmissions: SubmittedRegistration[];
-  onViewReceipt: (reg: SubmittedRegistration, initialTab?: 'receipt' | 'cards') => void;
+  onViewReceipt: (reg: SubmittedRegistration, initialTab?: 'receipt' | 'cards' | 'kwitansi') => void;
   onToggleVerify: (id: string) => void;
   onDeleteSubmission: (id: string) => void;
   onRestoreSubmission: (id: string) => void;
@@ -68,6 +70,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
   const [recapPrintedNotice, setRecapPrintedNotice] = useState(false);
   const [confirmPermanentId, setConfirmPermanentId] = useState<string | null>(null);
   const [confirmEmptyAll, setConfirmEmptyAll] = useState(false);
+  const [selectedKwitansi, setSelectedKwitansi] = useState<SubmittedRegistration | null>(null);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -620,6 +623,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
                           <span>Lihat Detail</span>
                         </button>
 
+                        <button
+                          type="button"
+                          onClick={() => setSelectedKwitansi(item)}
+                          className="min-h-[44px] px-3 py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8DC] text-[#4A2C11] border border-[#D8CEBE] font-semibold text-xs flex items-center gap-1 cursor-pointer"
+                          title="Lihat Kwitansi"
+                        >
+                          <Receipt className="w-4 h-4 text-[#B45309]" />
+                          <span>Kwitansi</span>
+                        </button>
+
                         {isConfirmingThis ? (
                           <div className="flex items-center gap-1.5 bg-red-50 p-1.5 rounded-xl border border-red-300">
                             <AlertTriangle className="w-4 h-4 text-red-700 ml-1 shrink-0" />
@@ -799,6 +812,16 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
 
                         <button
                           type="button"
+                          onClick={() => setSelectedKwitansi(item)}
+                          className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#B45309] hover:bg-[#92400E] text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                          title="Cetak Kwitansi Pembayaran Resmi"
+                        >
+                          <Receipt className="w-4 h-4 text-[#F3D299]" />
+                          <span>Cetak Kwitansi</span>
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={() => onViewReceipt(item, 'receipt')}
                           className="min-h-[44px] px-3.5 py-2 rounded-xl bg-[#4A2C11] hover:bg-[#361F0B] text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer"
                         >
@@ -897,6 +920,45 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({
             </div>
           )}
         </>
+      )}
+
+      {/* MODAL CETAK KWITANSI RESMI PRAMUKA */}
+      {selectedKwitansi && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs overflow-y-auto no-print"
+        >
+          <div className="bg-[#FAF7F2] w-full max-w-5xl rounded-3xl border-2 border-[#4A2C11] shadow-2xl p-4 sm:p-6 my-auto max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#E5DEC9]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-[#4A2C11] flex items-center justify-center text-white">
+                  <Receipt className="w-5 h-5 text-[#F3D299]" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base sm:text-lg text-[#23170D]">
+                    Kwitansi Pembayaran: {selectedKwitansi.namaSekolah}
+                  </h3>
+                  <p className="text-xs text-[#6B5744]">
+                    ID: {selectedKwitansi.nomorRegistrasi} · Bendahara: Susilawati, S.Pd.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedKwitansi(null)}
+                className="min-h-[40px] px-3.5 py-1.5 rounded-xl bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs cursor-pointer"
+              >
+                Tutup
+              </button>
+            </div>
+            <KwitansiPramuka
+              registration={selectedKwitansi}
+              onClose={() => setSelectedKwitansi(null)}
+              isModal={true}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

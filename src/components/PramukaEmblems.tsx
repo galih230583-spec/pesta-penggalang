@@ -155,3 +155,172 @@ export const WosmLogo: React.FC<{ className?: string }> = ({
     />
   </svg>
 );
+
+/**
+ * Vector illustration of Official Scout Round Stamp (Stempel Gerakan Pramuka Kwarran Muara Kaman)
+ * Classic purple ink with double circle border, stars, and central Tunas Kelapa emblem.
+ */
+export const StempelPramukaMuaraKaman: React.FC<{ className?: string }> = ({
+  className = 'w-32 h-32',
+}) => (
+  <svg
+    viewBox="0 0 200 200"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    role="img"
+    aria-label="Stempel Resmi Kwartir Ranting Gerakan Pramuka Muara Kaman"
+  >
+    {/* Outer Dotted/Serrated Rim & Double Ring */}
+    <circle cx="100" cy="100" r="95" stroke="#581C87" strokeWidth="4" strokeDasharray="3 2" opacity="0.85" />
+    <circle cx="100" cy="100" r="90" stroke="#581C87" strokeWidth="3" opacity="0.9" />
+    <circle cx="100" cy="100" r="64" stroke="#581C87" strokeWidth="2" opacity="0.85" />
+
+    {/* Top Curved Text: GERAKAN PRAMUKA */}
+    <path id="stamp-top-arc" d="M 28 100 A 72 72 0 0 1 172 100" fill="none" />
+    <text fill="#581C87" fontSize="11.5" fontWeight="900" letterSpacing="2.5" opacity="0.92">
+      <textPath href="#stamp-top-arc" startOffset="50%" textAnchor="middle">
+        GERAKAN PRAMUKA
+      </textPath>
+    </text>
+
+    {/* Bottom Curved Text: KWARRAN MUARA KAMAN */}
+    <path id="stamp-bottom-arc" d="M 172 100 A 72 72 0 0 1 28 100" fill="none" />
+    <text fill="#581C87" fontSize="10" fontWeight="900" letterSpacing="2" opacity="0.92">
+      <textPath href="#stamp-bottom-arc" startOffset="50%" textAnchor="middle">
+        KWARRAN MUARA KAMAN
+      </textPath>
+    </text>
+
+    {/* Left and Right Star Badges */}
+    <polygon points="26,100 28.5,104 33,104.5 29.5,108 30.5,112.5 26,110 21.5,112.5 22.5,108 19,104.5 23.5,104" fill="#581C87" opacity="0.9" />
+    <polygon points="174,100 176.5,104 181,104.5 177.5,108 178.5,112.5 174,110 169.5,112.5 170.5,108 167,104.5 171.5,104" fill="#581C87" opacity="0.9" />
+
+    {/* Center Core: PANITIA & Tunas Kelapa Silhouette */}
+    <rect x="36" y="88" width="128" height="24" rx="4" fill="#F3E8FF" opacity="0.3" />
+    <text x="100" y="80" textAnchor="middle" fill="#581C87" fontSize="9" fontWeight="800" letterSpacing="1.5" opacity="0.9">
+      PANITIA PESTA
+    </text>
+    <text x="100" y="126" textAnchor="middle" fill="#581C87" fontSize="9" fontWeight="800" letterSpacing="1.5" opacity="0.9">
+      PENGGALANG 2026
+    </text>
+
+    {/* Center Mini Tunas Kelapa */}
+    <g transform="translate(85, 87) scale(0.25)" opacity="0.88">
+      <path d="M14 114C14 114 22 86 52 86C78 86 90 105 90 118C90 134 76 149 52 149C26 149 14 123 14 114Z" fill="#581C87" />
+      <path d="M11 114C11 110 18 102 25 97C20 108 20 120 25 131C18 126 11 118 11 114Z" fill="#581C87" />
+      <path d="M84 112C88 94 78 76 70 58C63 42 66 26 71 17C74 28 77 38 78 46C80 30 82 14 87 4C89 20 98 38 99 56C100 72 93 86 95 104C96 112 94 119 88 123L84 112Z" fill="#581C87" />
+      <path d="M86 119C91 128 96 141 101 153C102 156 99 158 96 156C88 150 84 137 80 125L86 119Z" fill="#581C87" />
+    </g>
+  </svg>
+);
+
+/**
+ * Vector illustration of the Official Signature of Treasurer Susilawati, S.Pd.
+ * Rendered in dark blue fountain pen ink with natural calligraphic curves and flourish.
+ */
+export const TandaTanganBendahara: React.FC<{ className?: string }> = ({
+  className = 'w-48 h-20',
+}) => (
+  <svg
+    viewBox="0 0 280 110"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    role="img"
+    aria-label="Tanda Tangan Bendahara Susilawati, S.Pd."
+  >
+    {/* Initial 'S' large flourish and upper loop */}
+    <path
+      d="M24 75 C 20 45, 38 18, 62 14 C 78 12, 92 24, 88 42 C 84 62, 52 74, 42 84 C 36 90, 48 94, 68 88 C 88 82, 108 64, 118 52"
+      stroke="#1E3A8A"
+      strokeWidth="3.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Middle looping letters 'usi' and peaks */}
+    <path
+      d="M112 60 C 118 48, 126 44, 132 56 C 136 64, 142 64, 148 52 C 154 42, 160 44, 164 58 C 168 70, 178 72, 186 54 C 192 42, 198 48, 202 62"
+      stroke="#1E3A8A"
+      strokeWidth="2.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Extended finishing loop & cross strike */}
+    <path
+      d="M198 62 C 210 50, 224 44, 238 48 C 248 52, 252 64, 244 74 C 232 86, 210 90, 180 92 C 140 94, 70 96, 32 94"
+      stroke="#1E3A8A"
+      strokeWidth="2.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Dot flourishes */}
+    <circle cx="134" cy="38" r="2.2" fill="#1E3A8A" />
+    <circle cx="166" cy="36" r="2.2" fill="#1E3A8A" />
+    <circle cx="254" cy="56" r="2.5" fill="#1E3A8A" />
+  </svg>
+);
+
+/**
+ * Tanda Tangan Resmi & Stempel Panitia Pelaksana Pesta Penggalang Muara Kaman Tahun 2026
+ * Diperbarui sesuai dokumen 'ttd penggalang.jpg' yang diunggah pengguna.
+ */
+export const TandaTanganPenggalangBaru: React.FC<{ className?: string }> = ({
+  className = 'w-48 h-20',
+}) => (
+  <svg
+    viewBox="0 0 325 380"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    role="img"
+    aria-label="Tanda Tangan dan Stempel Resmi Panitia Pelaksana Pesta Penggalang Muara Kaman 2026"
+  >
+    <defs>
+      <path id="arcPramukaComp" d="M 48 160 A 70 70 0 0 0 166 160" fill="none" />
+    </defs>
+
+    {/* STEMPEL RESMI (Tinta Biru Tua / Navy Blue #0E1F4B) */}
+    <g stroke="#0E1F4B" fill="#0E1F4B">
+      <rect x="14" y="14" width="186" height="352" rx="24" ry="24" fill="none" stroke="#0E1F4B" strokeWidth="4.5" />
+      <rect x="21" y="21" width="172" height="338" rx="17" ry="17" fill="none" stroke="#0E1F4B" strokeWidth="1.8" />
+      <circle cx="107" cy="122" r="64" fill="none" stroke="#0E1F4B" strokeWidth="3.8" />
+
+      <g transform="translate(62, 54) scale(0.75)" fill="#110B05" stroke="none">
+        <path d="M14 114C14 114 22 86 52 86C78 86 90 105 90 118C90 134 76 149 52 149C26 149 14 123 14 114Z" />
+        <path d="M11 114C11 110 18 102 25 97C20 108 20 120 25 131C18 126 11 118 11 114Z" />
+        <path d="M84 112C88 94 78 76 70 58C63 42 66 26 71 17C74 28 77 38 78 46C80 30 82 14 87 4C89 20 98 38 99 56C100 72 93 86 95 104C96 112 94 119 88 123L84 112Z" />
+        <path d="M86 119C91 128 96 141 101 153C102 156 99 158 96 156C88 150 84 137 80 125L86 119Z" />
+      </g>
+
+      <text fontFamily="'Arial Black', 'Plus Jakarta Sans', sans-serif" fontSize="14.5" fontWeight="900" letterSpacing="2" stroke="none" fill="#0E1F4B">
+        <textPath href="#arcPramukaComp" startOffset="50%" textAnchor="middle">
+          GERAKAN PRAMUKA
+        </textPath>
+      </text>
+
+      <g fontFamily="'Arial Black', 'Plus Jakarta Sans', sans-serif" textAnchor="middle" stroke="none" fill="#0E1F4B">
+        <text x="107" y="235" fontSize="16" fontWeight="900" letterSpacing="0.3">
+          PANITIA PELAKSANA
+        </text>
+        <text x="107" y="267" fontSize="16.5" fontWeight="900" letterSpacing="0.3">
+          PESTA PENGGALANG
+        </text>
+        <text x="107" y="297" fontSize="12.8" fontWeight="800" letterSpacing="0.2">
+          KECAMATAN MUARA KAMAN
+        </text>
+        <text x="107" y="326" fontSize="14.5" fontWeight="900" letterSpacing="1">
+          TAHUN 2026
+        </text>
+      </g>
+    </g>
+
+    {/* TANDA TANGAN BASAH (Tinta Hitam Pekat #0A0A0A) */}
+    <g stroke="#0A0A0A" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M188 152 C 176 156, 172 168, 184 175 C 196 182, 203 186, 200 196 C 196 204, 185 204, 178 198" strokeWidth="4.8" />
+      <path d="M178 198 C 188 194, 205 180, 218 174 C 228 168, 238 180, 226 195 C 218 204, 210 205, 224 199 C 238 193, 248 177, 252 173 C 258 168, 266 179, 256 194 C 248 204, 243 206, 254 200" strokeWidth="4.5" />
+      <path d="M254 200 C 265 192, 276 178, 280 164 C 284 152, 292 150, 292 163 C 291 183, 287 218, 287 246 C 286 261, 285 273, 287 275 C 289 276, 294 271, 294 260" strokeWidth="5" />
+      <path d="M273 207 C 285 205, 299 204, 309 206" strokeWidth="4.6" />
+    </g>
+  </svg>
+);

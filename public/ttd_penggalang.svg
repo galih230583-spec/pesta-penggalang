@@ -1,0 +1,60 @@
+<svg viewBox="0 0 325 380" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tanda Tangan dan Stempel Resmi Panitia Pelaksana Pesta Penggalang Muara Kaman 2026">
+  <defs>
+    <!-- Smooth circular arc under circle for GERAKAN PRAMUKA -->
+    <path id="arcPramuka" d="M 48 160 A 70 70 0 0 0 166 160" fill="none" />
+  </defs>
+
+  <!-- 1. STEMPEL RESMI (Tinta Biru Tua / Navy Blue #0E1F4B) -->
+  <g stroke="#0E1F4B" fill="#0E1F4B">
+    <!-- Bingkai Luar Melengkung Tebal -->
+    <rect x="14" y="14" width="186" height="352" rx="24" ry="24" fill="none" stroke="#0E1F4B" stroke-width="4.5" />
+    <!-- Bingkai Dalam Halus -->
+    <rect x="21" y="21" width="172" height="338" rx="17" ry="17" fill="none" stroke="#0E1F4B" stroke-width="1.8" />
+
+    <!-- Lingkaran Lambang Gerakan Pramuka -->
+    <circle cx="107" cy="122" r="64" fill="none" stroke="#0E1F4B" stroke-width="3.8" />
+
+    <!-- Siluet Tunas Kelapa (Proporsional & Presisi di Tengah Lingkaran) -->
+    <g transform="translate(62, 54) scale(0.75)" fill="#110B05" stroke="none">
+      <path d="M14 114C14 114 22 86 52 86C78 86 90 105 90 118C90 134 76 149 52 149C26 149 14 123 14 114Z" />
+      <path d="M11 114C11 110 18 102 25 97C20 108 20 120 25 131C18 126 11 118 11 114Z" />
+      <path d="M84 112C88 94 78 76 70 58C63 42 66 26 71 17C74 28 77 38 78 46C80 30 82 14 87 4C89 20 98 38 99 56C100 72 93 86 95 104C96 112 94 119 88 123L84 112Z" />
+      <path d="M86 119C91 128 96 141 101 153C102 156 99 158 96 156C88 150 84 137 80 125L86 119Z" />
+    </g>
+
+    <!-- Tulisan Melingkar: GERAKAN PRAMUKA (Rapi, Tegas & Terpusat) -->
+    <text font-family="'Arial Black', 'Plus Jakarta Sans', sans-serif" font-size="14.5" font-weight="900" letter-spacing="2" stroke="none" fill="#0E1F4B">
+      <textPath href="#arcPramuka" startOffset="50%" text-anchor="middle">
+        GERAKAN PRAMUKA
+      </textPath>
+    </text>
+
+    <!-- Tulisan Baris Bawah (Rapi & Sejajar) -->
+    <g font-family="'Arial Black', 'Plus Jakarta Sans', sans-serif" text-anchor="middle" stroke="none" fill="#0E1F4B">
+      <text x="107" y="235" font-size="16" font-weight="900" letter-spacing="0.3">
+        PANITIA PELAKSANA
+      </text>
+      <text x="107" y="267" font-size="16.5" font-weight="900" letter-spacing="0.3">
+        PESTA PENGGALANG
+      </text>
+      <text x="107" y="297" font-size="12.8" font-weight="800" letter-spacing="0.2">
+        KECAMATAN MUARA KAMAN
+      </text>
+      <text x="107" y="326" font-size="14.5" font-weight="900" letter-spacing="1">
+        TAHUN 2026
+      </text>
+    </g>
+  </g>
+
+  <!-- 2. TANDA TANGAN BASAH (Tinta Hitam Pekat #0A0A0A) Menimpa Sisi Kanan Stempel Secara Alami -->
+  <g stroke="#0A0A0A" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Tarikan Huruf Awal 'S' -->
+    <path d="M188 152 C 176 156, 172 168, 184 175 C 196 182, 203 186, 200 196 C 196 204, 185 204, 178 198" stroke-width="4.8" />
+    <!-- Tarikan Cursive 'e - e' -->
+    <path d="M178 198 C 188 194, 205 180, 218 174 C 228 168, 238 180, 226 195 C 218 204, 210 205, 224 199 C 238 193, 248 177, 252 173 C 258 168, 266 179, 256 194 C 248 204, 243 206, 254 200" stroke-width="4.5" />
+    <!-- Tarikan 'f' / Ekor Tegak Panjang Menjulang Turun -->
+    <path d="M254 200 C 265 192, 276 178, 280 164 C 284 152, 292 150, 292 163 C 291 183, 287 218, 287 246 C 286 261, 285 273, 287 275 C 289 276, 294 271, 294 260" stroke-width="5" />
+    <!-- Coretan Silang Tengah (Cross Strike) -->
+    <path d="M273 207 C 285 205, 299 204, 309 206" stroke-width="4.6" />
+  </g>
+</svg>

@@ -5,6 +5,8 @@ import {
   formatRupiah,
   formatTtlDisplay,
 } from '../types/registration';
+import { terbilangRupiah } from './terbilang';
+import { getActiveSignature } from './signatureAsset';
 
 export interface IdCardPerson {
   id: string;
@@ -45,6 +47,34 @@ const WOSM_SVG = `<svg viewBox="0 0 140 150" fill="none" xmlns="http://www.w3.or
   <path d="M52 125C56 119 66 119 72 125C78 131 86 131 90 125" stroke="#4B1E78" stroke-width="6.5" stroke-linecap="round"/>
   <path d="M52 131C56 137 66 137 72 131C78 125 86 125 90 131" stroke="#4B1E78" stroke-width="6.5" stroke-linecap="round"/>
   <path d="M53 129L43 142M87 129L97 142" stroke="#4B1E78" stroke-width="6" stroke-linecap="round"/>
+</svg>`;
+
+const STEMPEL_PRAMUKA_SVG = `<svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="95" stroke="#581C87" stroke-width="4" stroke-dasharray="3 2" opacity="0.85" />
+  <circle cx="100" cy="100" r="90" stroke="#581C87" stroke-width="3" opacity="0.9" />
+  <circle cx="100" cy="100" r="64" stroke="#581C87" stroke-width="2" opacity="0.85" />
+  <text x="100" y="52" text-anchor="middle" fill="#581C87" font-size="12" font-weight="900" letter-spacing="1.5">GERAKAN PRAMUKA</text>
+  <text x="100" y="162" text-anchor="middle" fill="#581C87" font-size="10.5" font-weight="900" letter-spacing="1">KWARRAN MUARA KAMAN</text>
+  <polygon points="26,100 28.5,104 33,104.5 29.5,108 30.5,112.5 26,110 21.5,112.5 22.5,108 19,104.5 23.5,104" fill="#581C87" opacity="0.9" />
+  <polygon points="174,100 176.5,104 181,104.5 177.5,108 178.5,112.5 174,110 169.5,112.5 170.5,108 167,104.5 171.5,104" fill="#581C87" opacity="0.9" />
+  <rect x="36" y="88" width="128" height="24" rx="4" fill="#F3E8FF" opacity="0.3" />
+  <text x="100" y="80" text-anchor="middle" fill="#581C87" font-size="9" font-weight="800" letter-spacing="1.5">PANITIA PESTA</text>
+  <text x="100" y="126" text-anchor="middle" fill="#581C87" font-size="9" font-weight="800" letter-spacing="1.5">PENGGALANG 2026</text>
+  <g transform="translate(85, 87) scale(0.25)" opacity="0.88">
+    <path d="M14 114C14 114 22 86 52 86C78 86 90 105 90 118C90 134 76 149 52 149C26 149 14 123 14 114Z" fill="#581C87" />
+    <path d="M11 114C11 110 18 102 25 97C20 108 20 120 25 131C18 126 11 118 11 114Z" fill="#581C87" />
+    <path d="M84 112C88 94 78 76 70 58C63 42 66 26 71 17C74 28 77 38 78 46C80 30 82 14 87 4C89 20 98 38 99 56C100 72 93 86 95 104C96 112 94 119 88 123L84 112Z" fill="#581C87" />
+    <path d="M86 119C91 128 96 141 101 153C102 156 99 158 96 156C88 150 84 137 80 125L86 119Z" fill="#581C87" />
+  </g>
+</svg>`;
+
+const TTD_SUSILAWATI_SVG = `<svg viewBox="0 0 280 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M24 75 C 20 45, 38 18, 62 14 C 78 12, 92 24, 88 42 C 84 62, 52 74, 42 84 C 36 90, 48 94, 68 88 C 88 82, 108 64, 118 52" stroke="#1E3A8A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M112 60 C 118 48, 126 44, 132 56 C 136 64, 142 64, 148 52 C 154 42, 160 44, 164 58 C 168 70, 178 72, 186 54 C 192 42, 198 48, 202 62" stroke="#1E3A8A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M198 62 C 210 50, 224 44, 238 48 C 248 52, 252 64, 244 74 C 232 86, 210 90, 180 92 C 140 94, 70 96, 32 94" stroke="#1E3A8A" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="134" cy="38" r="2.2" fill="#1E3A8A" />
+  <circle cx="166" cy="36" r="2.2" fill="#1E3A8A" />
+  <circle cx="254" cy="56" r="2.5" fill="#1E3A8A" />
 </svg>`;
 
 function loadImage(src: string): Promise<HTMLImageElement | null> {
@@ -1008,3 +1038,358 @@ export function downloadAdminRecapAsPdf(
       .slice(0, 10)}.pdf`
   );
 }
+
+/**
+ * Formats date for Kwitansi, ensuring year is always visible (e.g. "Muara Kaman, 13 Oktober 2026")
+ */
+export function formatKwitansiDate(rawDate?: string): string {
+  if (!rawDate) {
+    return 'Muara Kaman, 13 Oktober 2026';
+  }
+  let clean = rawDate
+    .replace(/\s*pukul\s*.*$/gi, '')
+    .replace(/,\s*\d{2}[:.]\d{2}.*$/gi, '')
+    .trim();
+
+  // Ensure year is present (e.g. 2026)
+  if (!/\b20\d{2}\b/.test(clean)) {
+    const yrMatch = rawDate.match(/\b(20\d{2})\b/);
+    const yr = yrMatch ? yrMatch[1] : '2026';
+    clean = `${clean} ${yr}`.trim();
+  }
+
+  if (!clean.toLowerCase().startsWith('muara kaman')) {
+    return `Muara Kaman, ${clean}`;
+  }
+  return clean;
+}
+
+/**
+ * Renders the Official Scout Receipt (Kwitansi Pembayaran Resmi) onto an HTML5 Canvas
+ * Standard 18 x 7 cm dimensions (ratio 18:7, 1800 x 700 px), without kop,
+ * featuring Tunas Kelapa silhouette, WOSM badge, and Susilawati, S.Pd. signature line.
+ * Terbilang nominal spacing is adjusted so nothing overlaps, and signature height is elevated.
+ */
+export async function renderKwitansiToCanvas(reg: SubmittedRegistration): Promise<HTMLCanvasElement> {
+  const canvas = document.createElement('canvas');
+  // Dimensions 18 x 7 cm (1800px x 700px)
+  const width = 1800;
+  const height = 700;
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return canvas;
+
+  // Background warm cream
+  ctx.fillStyle = '#FDFBF7';
+  ctx.fillRect(0, 0, width, height);
+
+  // Outer border & inner dashed frame
+  ctx.strokeStyle = '#4A2C11';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(14, 14, width - 28, height - 28);
+
+  ctx.strokeStyle = '#C8A97E';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([8, 6]);
+  ctx.strokeRect(26, 26, width - 52, height - 52);
+  ctx.setLineDash([]);
+
+  ctx.strokeStyle = '#8C6D46';
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(36, 36, width - 72, height - 72);
+
+  // Top Red-White Ribbon (Pita Merah Putih Kacu Pramuka)
+  const ribbonY = 40;
+  const ribbonH = 10;
+  ctx.fillStyle = '#C81E1E';
+  ctx.fillRect(40, ribbonY, (width - 80) / 2, ribbonH);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(40 + (width - 80) / 2, ribbonY, (width - 80) / 2, ribbonH);
+  ctx.strokeStyle = '#D8CEBE';
+  ctx.lineWidth = 1.2;
+  ctx.strokeRect(40, ribbonY, width - 80, ribbonH);
+
+  // Watermark Tunas Kelapa in center
+  const tunasWatermark = await loadImage(
+    `data:image/svg+xml;utf8,${encodeURIComponent(TUNAS_KELAPA_SVG)}`
+  );
+  if (tunasWatermark) {
+    ctx.save();
+    ctx.globalAlpha = 0.04;
+    ctx.drawImage(tunasWatermark, width / 2 - 200, height / 2 - 230, 400, 460);
+    ctx.restore();
+  }
+
+  // TOP HEADER: Tunas Kelapa (Kiri), Judul KWITANSI PEMBAYARAN (Tengah), Pandu Dunia WOSM (Kanan) - TANPA KOP
+  const headerY = 58;
+  const logoBoxSize = 66;
+
+  // Left: Tunas Kelapa Badge
+  ctx.fillStyle = '#4A2C11';
+  ctx.beginPath();
+  ctx.roundRect(52, headerY, logoBoxSize, logoBoxSize, 14);
+  ctx.fill();
+  ctx.strokeStyle = '#C8A97E';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const tunasGold = `<svg viewBox="0 0 120 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M14 114C14 114 22 86 52 86C78 86 90 105 90 118C90 134 76 149 52 149C26 149 14 123 14 114Z" fill="#F3D299"/>
+    <path d="M11 114C11 110 18 102 25 97C20 108 20 120 25 131C18 126 11 118 11 114Z" fill="#F3D299"/>
+    <path d="M84 112C88 94 78 76 70 58C63 42 66 26 71 17C74 28 77 38 78 46C80 30 82 14 87 4C89 20 98 38 99 56C100 72 93 86 95 104C96 112 94 119 88 123L84 112Z" fill="#F3D299"/>
+    <path d="M86 119C91 128 96 141 101 153C102 156 99 158 96 156C88 150 84 137 80 125L86 119Z" fill="#F3D299"/>
+  </svg>`;
+  const tunasImg = await loadImage(
+    `data:image/svg+xml;utf8,${encodeURIComponent(tunasGold)}`
+  );
+  if (tunasImg) {
+    ctx.drawImage(tunasImg, 60, headerY + 6, 50, 54);
+  }
+
+  // Right: WOSM Badge
+  ctx.fillStyle = '#FFFFFF';
+  ctx.beginPath();
+  ctx.roundRect(width - 52 - logoBoxSize, headerY, logoBoxSize, logoBoxSize, 14);
+  ctx.fill();
+  ctx.strokeStyle = '#D8CEBE';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  const wosmImg = await loadImage(
+    `data:image/svg+xml;utf8,${encodeURIComponent(WOSM_SVG)}`
+  );
+  if (wosmImg) {
+    ctx.drawImage(wosmImg, width - 52 - logoBoxSize + 6, headerY + 6, 54, 54);
+  }
+
+  // Center: Header Label "KWITANSI PEMBAYARAN" (Besar & Jelas)
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = '900 36px "Plus Jakarta Sans", "Georgia", serif';
+  ctx.fillText('KWITANSI PEMBAYARAN', width / 2, headerY + 42);
+
+  // Decorative subline under title
+  ctx.strokeStyle = '#C8A97E';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(width / 2 - 180, headerY + 56);
+  ctx.lineTo(width / 2 + 180, headerY + 56);
+  ctx.stroke();
+
+  // Divider Line under Header
+  const dividerY = headerY + 76;
+  ctx.strokeStyle = '#4A2C11';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(52, dividerY);
+  ctx.lineTo(width - 52, dividerY);
+  ctx.stroke();
+
+  // CONTENT ROWS (Telah terima dari, Uang sejumlah, Untuk Keperluan, Catatan)
+  // Diposisikan rapi sehingga jarak proporsional dan tidak saling berhimpitan
+  const labelX = 56;
+  const colDotX = 310;
+  const valX = 336;
+
+  const drawRowDivider = (yPos: number) => {
+    ctx.strokeStyle = '#E5DEC9';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(52, yPos);
+    ctx.lineTo(width - 52, yPos);
+    ctx.stroke();
+  };
+
+  // 1. Telah terima dari : [Hanya nama sekolah]
+  let curY = dividerY + 36;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = '800 23px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Telah terima dari', labelX, curY);
+  ctx.fillText(':', colDotX, curY);
+
+  ctx.fillStyle = '#23170D';
+  ctx.font = '800 26px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(reg.namaSekolah, valX, curY);
+
+  curY += 14;
+  drawRowDivider(curY);
+
+  // 2. Uang sejumlah : [Terbilang]
+  curY += 36;
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = '800 23px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Uang sejumlah', labelX, curY);
+  ctx.fillText(':', colDotX, curY);
+
+  const terbilangTeks = terbilangRupiah(reg.totalBiaya);
+  // Highlight box for terbilang
+  ctx.fillStyle = '#FAF3E0';
+  ctx.beginPath();
+  ctx.roundRect(valX, curY - 24, width - 56 - valX, 36, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#E0D3B8';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = 'italic 700 21px "Georgia", serif';
+  ctx.fillText(`“ ${terbilangTeks} ”`, valX + 16, curY + 2);
+
+  curY += 18;
+  drawRowDivider(curY);
+
+  // 3. Untuk Keperluan : Kontribusi Perkemahan Pesta Penggalang
+  curY += 36;
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = '800 23px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Untuk Keperluan', labelX, curY);
+  ctx.fillText(':', colDotX, curY);
+
+  ctx.fillStyle = '#23170D';
+  ctx.font = '800 24px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Kontribusi Perkemahan Pesta Penggalang', valX, curY);
+
+  curY += 14;
+  drawRowDivider(curY);
+
+  // 4. Catatan : Pembayaran Via Transfer
+  curY += 36;
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = '800 23px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Catatan', labelX, curY);
+  ctx.fillText(':', colDotX, curY);
+
+  // Badge "Pembayaran Via Transfer"
+  ctx.fillStyle = '#F0FDF4';
+  ctx.beginPath();
+  ctx.roundRect(valX, curY - 22, 280, 32, 6);
+  ctx.fill();
+  ctx.strokeStyle = '#BBF7D0';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#14532D';
+  ctx.font = '800 19px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Pembayaran Via Transfer', valX + 16, curY);
+
+  curY += 14;
+  drawRowDivider(curY);
+
+  // BOTTOM SECTION (Nominal Box on Left & Signature Block on Right)
+  // Jarak vertikal dipisahkan dengan jelas sehingga tidak ada teks yang berhimpitan
+  const bottomY = 376;
+
+  // Left: Nominal Box
+  ctx.fillStyle = '#6B5744';
+  ctx.font = '800 17px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('TERBILANG NOMINAL :', labelX, bottomY + 16);
+
+  const boxW = 440;
+  const boxH = 88;
+  const boxY = bottomY + 26;
+  ctx.fillStyle = '#4A2C11';
+  ctx.beginPath();
+  ctx.roundRect(labelX, boxY, boxW, boxH, 12);
+  ctx.fill();
+  ctx.strokeStyle = '#C8A97E';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.fillStyle = '#F3D299';
+  ctx.font = '900 42px "JetBrains Mono", monospace';
+  ctx.fillText(formatRupiah(reg.totalBiaya), labelX + 22, boxY + 58);
+
+  // Status LUNAS Badge
+  const lunasY = boxY + boxH + 14;
+  ctx.fillStyle = '#F0FDF4';
+  ctx.beginPath();
+  ctx.roundRect(labelX, lunasY, 246, 36, 8);
+  ctx.fill();
+  ctx.strokeStyle = '#15803D';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  ctx.fillStyle = '#15803D';
+  ctx.font = '900 17px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('✓ LUNAS / TERVERIFIKASI', labelX + 18, lunasY + 24);
+
+  // Right: Signature Block (Date with Year, Bendahara, Area Tanda Tangan Ditinggikan, Susilawati, S.Pd.)
+  const sigRightX = width - 56;
+  ctx.textAlign = 'right';
+
+  // Format date with Year: "Muara Kaman, 13 Oktober 2026"
+  const dateDisplay = formatKwitansiDate(reg.tanggalDaftar);
+
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = '700 21px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText(dateDisplay, sigRightX, bottomY + 16);
+
+  ctx.font = '800 21px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Bendahara,', sigRightX, bottomY + 44);
+
+  // Area Tanda Tangan: DITINGGIKAN & DISESUAIKAN (Tinggi 150px untuk ruang tanda tangan leluasa)
+  const sigBoxW = 260;
+  const sigBoxH = 150;
+  const sigBoxY = bottomY + 50;
+
+  const customSignatureUrl = getActiveSignature();
+  if (customSignatureUrl && customSignatureUrl.trim() !== '') {
+    const ttdImg = await loadImage(customSignatureUrl);
+    if (ttdImg) {
+      ctx.drawImage(ttdImg, sigRightX - sigBoxW, sigBoxY, sigBoxW, sigBoxH);
+    }
+  }
+
+  // Underlined Name Susilawati, S.Pd. diletakkan di bawah dengan jarak yang pas dan proporsional
+  const underlineY = sigBoxY + sigBoxH + 4;
+  ctx.strokeStyle = '#4A2C11';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(sigRightX - sigBoxW, underlineY);
+  ctx.lineTo(sigRightX, underlineY);
+  ctx.stroke();
+
+  ctx.fillStyle = '#4A2C11';
+  ctx.font = '900 25px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Susilawati, S.Pd.', sigRightX, underlineY + 30);
+
+  return canvas;
+}
+
+/**
+ * Downloads the Kwitansi directly as a PDF sized exactly 18 x 7 cm (180mm x 70mm)
+ */
+export async function downloadKwitansiAsPdf(reg: SubmittedRegistration): Promise<void> {
+  const canvas = await renderKwitansiToCanvas(reg);
+  const imgData = canvas.toDataURL('image/jpeg', 0.96);
+  // Dimensions 18 x 7 cm landscape (180mm x 70mm)
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: [180, 70],
+  });
+  // Exact 180mm x 70mm full size
+  pdf.addImage(imgData, 'JPEG', 0, 0, 180, 70);
+  const safeSchool = reg.namaSekolah.replace(/[^a-zA-Z0-9_-]/g, '_');
+  pdf.save(`Kwitansi_Pesta_Penggalang_${safeSchool}.pdf`);
+}
+
+/**
+ * Downloads the Kwitansi as a high resolution PNG image (1800 x 700 px, 18 x 7 cm ratio)
+ */
+export async function downloadKwitansiAsPng(reg: SubmittedRegistration): Promise<void> {
+  const canvas = await renderKwitansiToCanvas(reg);
+  const dataUrl = canvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  const safeSchool = reg.namaSekolah.replace(/[^a-zA-Z0-9_-]/g, '_');
+  link.href = dataUrl;
+  link.download = `Kwitansi_Pesta_Penggalang_${safeSchool}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+
+

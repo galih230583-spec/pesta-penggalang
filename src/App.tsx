@@ -21,6 +21,7 @@ import {
   ChevronRight,
   ShieldCheck,
   IdCard,
+  Receipt,
 } from 'lucide-react';
 import {
   RegistrationFormData,
@@ -86,7 +87,7 @@ export default function App() {
 
   const [activeView, setActiveView] = useState<'form' | 'success' | 'history' | 'admin'>('form');
   const [currentReceipt, setCurrentReceipt] = useState<SubmittedRegistration | null>(null);
-  const [receiptSubTab, setReceiptSubTab] = useState<'receipt' | 'cards'>('receipt');
+  const [receiptSubTab, setReceiptSubTab] = useState<'receipt' | 'cards' | 'kwitansi'>('receipt');
 
   // Copy states
   const [copiedRekening, setCopiedRekening] = useState(false);
@@ -1158,6 +1159,18 @@ export default function App() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCurrentReceipt(item);
+                            setReceiptSubTab('kwitansi');
+                            setActiveView('success');
+                          }}
+                          className="min-h-[48px] px-4 py-2.5 rounded-xl bg-[#B45309] hover:bg-[#92400E] text-white font-bold text-sm flex items-center gap-2 cursor-pointer shadow-2xs"
+                        >
+                          <Receipt className="w-4 h-4 text-[#F3D299]" />
+                          <span>Cetak Kwitansi</span>
+                        </button>
                         <button
                           type="button"
                           onClick={() => {

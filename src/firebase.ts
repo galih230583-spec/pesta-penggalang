@@ -15,7 +15,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
-import { SubmittedRegistration, PaymentProofFile } from '../types/registration';
+import { SubmittedRegistration, PaymentProofFile } from './types/registration';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);

@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   IdCard,
   FileText,
+  Receipt,
 } from 'lucide-react';
 import {
   SubmittedRegistration,
@@ -27,12 +28,13 @@ import {
 } from '../utils/downloadHelpers';
 import { TunasKelapaLogo, WosmLogo } from './PramukaEmblems';
 import { IdCardsShowcase } from './IdCardsShowcase';
+import { KwitansiPramuka } from './KwitansiPramuka';
 
 interface SubmissionSuccessViewProps {
   registration: SubmittedRegistration;
   onCreateNew: () => void;
   onBackToHistory?: () => void;
-  initialSubTab?: 'receipt' | 'cards';
+  initialSubTab?: 'receipt' | 'cards' | 'kwitansi';
 }
 
 export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
@@ -41,7 +43,7 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
   onBackToHistory,
   initialSubTab = 'receipt',
 }) => {
-  const [subTab, setSubTab] = useState<'receipt' | 'cards'>(initialSubTab);
+  const [subTab, setSubTab] = useState<'receipt' | 'cards' | 'kwitansi'>(initialSubTab);
   const [copiedWaText, setCopiedWaText] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
@@ -104,36 +106,50 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
           <div />
         )}
 
-        <div className="flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-[#E5DEC9] shadow-2xs">
+        <div className="flex flex-wrap items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-[#E5DEC9] shadow-2xs">
           <button
             type="button"
             onClick={() => setSubTab('receipt')}
-            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               subTab === 'receipt'
                 ? 'bg-[#4A2C11] text-white shadow-xs'
                 : 'text-[#6B5744] hover:text-[#23170D]'
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Bukti Pendaftaran & Pembayaran</span>
+            <span>Bukti Pendaftaran</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSubTab('kwitansi')}
+            className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+              subTab === 'kwitansi'
+                ? 'bg-[#B45309] text-white shadow-xs'
+                : 'text-[#6B5744] hover:text-[#23170D]'
+            }`}
+          >
+            <Receipt className="w-4 h-4 text-[#F3D299]" />
+            <span>Kwitansi Pembayaran Resmi</span>
           </button>
           <button
             type="button"
             onClick={() => setSubTab('cards')}
-            className={`min-h-[44px] px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
+            className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer ${
               subTab === 'cards'
                 ? 'bg-[#C81E1E] text-white shadow-xs'
                 : 'text-[#6B5744] hover:text-[#23170D]'
             }`}
           >
             <IdCard className="w-4 h-4" />
-            <span>Kartu Peserta & Pembina (20 Kartu)</span>
+            <span>Kartu Peserta (20 Kartu)</span>
           </button>
         </div>
       </div>
 
       {subTab === 'cards' ? (
         <IdCardsShowcase registration={registration} />
+      ) : subTab === 'kwitansi' ? (
+        <KwitansiPramuka registration={registration} />
       ) : (
         <div className="bg-white rounded-3xl border border-[#E5DEC9] shadow-sm overflow-hidden">
           {/* Banner Berhasil */}
@@ -543,8 +559,17 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
               </div>
             </div>
 
-            {/* Tombol Aksi Bawah (Simpan Bukti PDF, Lihat Kartu Nama, & Buat Pendaftaran Baru) */}
-            <div className="pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 no-print">
+            {/* Tombol Aksi Bawah (Cetak Kwitansi, Simpan Bukti PDF, Lihat Kartu Nama, & Buat Pendaftaran Baru) */}
+            <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 no-print">
+              <button
+                type="button"
+                onClick={() => setSubTab('kwitansi')}
+                className="min-h-[52px] px-4 py-3 rounded-xl bg-[#B45309] hover:bg-[#92400E] text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.99] transition-all cursor-pointer shadow-sm"
+              >
+                <Receipt className="w-5 h-5 text-[#F3D299]" />
+                <span>Cetak Kwitansi Resmi</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleDownloadReceipt}
@@ -559,7 +584,7 @@ export const SubmissionSuccessView: React.FC<SubmissionSuccessViewProps> = ({
                 ) : (
                   <>
                     <Download className="w-5 h-5" />
-                    <span>Simpan / Cetak Bukti (.PDF)</span>
+                    <span>Simpan Bukti Daftar (.PDF)</span>
                   </>
                 )}
               </button>
